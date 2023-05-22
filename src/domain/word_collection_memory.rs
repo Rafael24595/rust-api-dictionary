@@ -19,11 +19,15 @@ const SOURCE_PATH: &str = "./assets/Dictionary_es.csv";
 
 impl WordCollectionMemory {
 
-    pub fn new() -> impl WordCollection + Dependency {
+    pub fn new() -> impl WordCollection {
         return WordCollectionMemory {
             headers: StringRecord::new(),
             map: HashMap::new()
         }
+    }
+
+    fn insert(&mut self, word: Word) {
+        self.map.insert(word.word.clone().unwrap(), word);
     }
 
 }
@@ -42,10 +46,6 @@ impl WordCollection for WordCollectionMemory {
             }
         }
         return filter;
-    }
-
-    fn insert(&mut self, word: Word) {
-        self.map.insert(word.word.clone().unwrap(), word);
     }
 
 }

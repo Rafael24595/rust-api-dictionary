@@ -15,6 +15,6 @@ fn main() {
     println!("{:?}", collection.find_includes(&"Ab".to_string()));
 }
 
-fn get_collection() -> impl WordCollection + Dependency {
+fn get_collection() -> impl WordCollection {
     return WordCollectionMemory::new();
 }
