@@ -24,8 +24,6 @@ const QUERY_PARAMS: &str = "m=form";
 
 impl RaeRaider {
 
-    
-
     pub fn new(code: String) -> RaeRaider {
         return RaeRaider {
             code,
