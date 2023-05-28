@@ -22,16 +22,19 @@ async fn main() {
 
     println!("---------------------------------------------");
 
-    let raider = RaeRaider::new(random.word.clone().unwrap());
-    let descriptions = raider.loot_descriptions().await;
+    let mut raider = RaeRaider::new(random.word.clone().unwrap());
 
-    if descriptions.as_ref().unwrap().len() == 0 {
-        println!("Descriptions not found for word {:?}", random.word.clone().unwrap());
-    } 
-
-    for description in descriptions.unwrap() {
-        println!("{:?}", description);
-        println!("-------------------------------------------------------");
+    if raider.load().await.is_ok() {
+        let descriptions = raider.loot_descriptions();
+    
+        if descriptions.as_ref().unwrap().len() == 0 {
+            println!("Descriptions not found for word {:?}", random.word.clone().unwrap());
+        } 
+    
+        for description in descriptions.unwrap() {
+            println!("{:?}", description);
+            println!("-------------------------------------------------------");
+        }
     }
 }
 

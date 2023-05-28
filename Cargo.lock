@@ -1218,6 +1218,7 @@ name = "spn-api"
 version = "0.1.0"
 dependencies = [
  "csv",
+ "ego-tree",
  "rand 0.8.5",
  "regex",
  "reqwest",

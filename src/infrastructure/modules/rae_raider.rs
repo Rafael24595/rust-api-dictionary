@@ -1,17 +1,20 @@
-use scraper::{Html, Selector, ElementRef, CaseSensitivity};
+use scraper::{Html, Selector, ElementRef, CaseSensitivity, Node};
+use ego_tree::{NodeRef};
 use regex::Regex;
 use reqwest;
 use reqwest::header::USER_AGENT;
 
 #[allow(dead_code)]
 pub struct RaeRaider {
-    code: String
+    code: String,
+    html: Option<Html>
 }
 
 const ELEMENTS_SELECTOR: &str = "article:first-child .j";
 const DESCRIPTION_INDEX: &str = "n_acep";
 const TYPE_CODE_I: &str = "d";
 const TYPE_CODE_II: &str = "g";
+const TYPE_CODE_III: &str = "c";
 const EXAMPLE_PHRASE: &str = "h";
 const REFERENCE: &str = "a";
 
@@ -21,15 +24,31 @@ const QUERY_PARAMS: &str = "m=form";
 
 impl RaeRaider {
 
+    
+
     pub fn new(code: String) -> RaeRaider {
         return RaeRaider {
-            code
+            code,
+            html: Option::None
         }
     }
 
-    pub async fn loot_descriptions(&self) -> Result<Vec<String>, Box<dyn std::error::Error>>  {
-        let parsed_html = self.html_request().await?;
-        
+    pub async fn load(&mut self) -> Result<bool, Box<dyn std::error::Error>> {
+        let mut status = false;
+        if self.html.is_none() {
+            self.html = Option::Some(self.html_request().await?);
+            status = true;
+        }
+        Ok(status)
+    }
+
+    pub fn loot_descriptions(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        if self.html.is_none() {
+            panic!("HTML is not loaded.");
+        } 
+
+        let parsed_html = self.html.as_ref().unwrap();
+    
         let mut found = true;
         let mut index = 1;
     
@@ -63,32 +82,50 @@ impl RaeRaider {
 
         for element in elements {
             let words = element.children()
-                .filter_map(|child| ElementRef::wrap(child)
-                .filter(|e| self.filter(e)))
+                .filter(|e| self.filter(e))
                 .map(|e| self.element_to_string(e))
                 .filter(|e| !e.is_empty())
                 .collect::<Vec<_>>();
     
             let re = Regex::new(r"\.$").unwrap();
-            let phrase = re.replace(words.join(" ").trim(), "").to_string();
+            let phrase = re.replace(words.join("").trim(), "").to_string();
             phrases.push(phrase);
         }
            
         Ok(phrases)
     }
 
-    fn filter(&self, e: &ElementRef) -> bool {
-        return !e.value().has_class(DESCRIPTION_INDEX, CaseSensitivity::CaseSensitive) && 
-        !e.value().has_class(TYPE_CODE_I, CaseSensitivity::CaseSensitive) && 
-        !e.value().has_class(TYPE_CODE_II, CaseSensitivity::CaseSensitive) && 
-        !e.value().has_class(EXAMPLE_PHRASE, CaseSensitivity::CaseSensitive);
+    fn filter(&self, e: &NodeRef<Node>) -> bool {
+        if e.value().is_text() {
+            return true;
+        }
+        return 
+            !e.value().as_element().unwrap().has_class(DESCRIPTION_INDEX, CaseSensitivity::CaseSensitive) && 
+            !e.value().as_element().unwrap().has_class(TYPE_CODE_I, CaseSensitivity::CaseSensitive) && 
+            !e.value().as_element().unwrap().has_class(TYPE_CODE_II, CaseSensitivity::CaseSensitive) && 
+            !e.value().as_element().unwrap().has_class(TYPE_CODE_III, CaseSensitivity::CaseSensitive) && 
+            !e.value().as_element().unwrap().has_class(EXAMPLE_PHRASE, CaseSensitivity::CaseSensitive);
     }
 
-    fn element_to_string(&self, e: ElementRef) -> String {
-        let mut word = e.text().next().unwrap().to_string();
-        if e.value().has_class(REFERENCE, CaseSensitivity::CaseSensitive) {
-            word = "Referencia a '".to_string() + &word + &"':".to_string();
+    fn element_to_string(&self, e: NodeRef<Node>) -> String {
+        let mut word = String::new();
+        let node = e.value();
+
+        if node.is_text() {
+            let text = node.as_text().unwrap();
+            return text.to_string();
         }
+
+        if node.is_element() {
+            let mut text = ElementRef::wrap(e).unwrap().text();
+            let element = node.as_element().unwrap();
+            word = text.next().unwrap().to_string() ;
+
+            if element.has_class(REFERENCE, CaseSensitivity::CaseSensitive) {
+                word = "Referencia a ".to_string() + &word ;
+            }
+        }
+
         return word;
     }
 
