@@ -65,7 +65,7 @@ impl RaeRaider {
             let words = element.children()
                 .filter_map(|child| ElementRef::wrap(child)
                 .filter(|e| self.filter(e)))
-                .map(|e| self.to_word(e))
+                .map(|e| self.element_to_string(e))
                 .filter(|e| !e.is_empty())
                 .collect::<Vec<_>>();
     
@@ -84,7 +84,7 @@ impl RaeRaider {
         !e.value().has_class(EXAMPLE_PHRASE, CaseSensitivity::CaseSensitive);
     }
 
-    fn to_word(&self, e: ElementRef) -> String {
+    fn element_to_string(&self, e: ElementRef) -> String {
         let mut word = e.text().next().unwrap().to_string();
         if e.value().has_class(REFERENCE, CaseSensitivity::CaseSensitive) {
             word = "Referencia a '".to_string() + &word + &"':".to_string();
