@@ -1,14 +1,11 @@
-#[path = "../commons/dependency.rs"] pub(crate) mod dependency;
-#[path = "../domain/word_collection.rs"] pub(crate) mod word_collection;
-
-use crate::word;
 use std::collections::HashMap;
 use csv::{self, StringRecord};
 use std::error::Error;
-use word::Word;
-use dependency::Dependency;
-use word_collection::WordCollection;
 use rand::Rng;
+
+use crate::configuration::word_collection::WordCollection;
+use crate::configuration::dependency::Dependency;
+use crate::configuration::word::Word;
 
 #[allow(dead_code)]
 pub struct WordCollectionMemory {
@@ -17,6 +14,9 @@ pub struct WordCollectionMemory {
 }
 
 const SOURCE_PATH: &str = "./assets/Dictionary_es.csv";
+
+unsafe impl Send for WordCollectionMemory{}
+unsafe impl Sync for WordCollectionMemory{}
 
 impl WordCollectionMemory {
 
@@ -28,7 +28,8 @@ impl WordCollectionMemory {
     }
 
     fn insert(&mut self, word: Word) {
-        self.map.insert(word.word.clone().unwrap(), word);
+        let key = word.word.clone().unwrap().to_lowercase();
+        self.map.insert(key, word);
     }
 
 }
@@ -68,7 +69,7 @@ impl Dependency for WordCollectionMemory {
     fn on_init(&mut self) -> Result<(), Box<dyn Error>> {
         let mut reader = csv::Reader::from_path(SOURCE_PATH)?;
         self.headers = reader.headers()?.clone();
- 
+
         for result in reader.deserialize() {
             let record: Word = result?;
             if record.word.is_some() {
