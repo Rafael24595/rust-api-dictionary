@@ -4,6 +4,7 @@
 
 #[launch]
 fn rocket() -> _ {
+    configuration::get_instance();
     let build = rocket::build();
     controller_word::define(build)
 }

@@ -1,4 +1,5 @@
 #[path = "../../infrastructure/word_collection_memory.rs"] mod word_collection;
+#[path = "../../infrastructure/modules/rae_raider.rs"] pub(crate) mod rae_raider;
 
 use crate::configuration::word_collection::WordCollection;
 

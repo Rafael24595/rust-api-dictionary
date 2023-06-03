@@ -2,10 +2,12 @@ use std::collections::HashMap;
 use csv::{self, StringRecord};
 use std::error::Error;
 use rand::Rng;
+//use futures::executor;
 
 use crate::configuration::word_collection::WordCollection;
 use crate::configuration::dependency::Dependency;
 use crate::configuration::word::Word;
+//use crate::configuration::diccionary::rae_raider::RaeRaider;
 
 #[allow(dead_code)]
 pub struct WordCollectionMemory {
@@ -50,11 +52,23 @@ impl WordCollectionMemory {
         return position_vector;
     }
 
+    /*async fn test(&mut self, code: &String) -> bool{
+        let mut rae = RaeRaider::new(code.to_string());
+        let mut word = self.map.get(code).unwrap().clone();
+        rae.load().await;
+        let descs = rae.loot_descriptions().unwrap();
+        word.meaning = Some(descs.join("#"));;
+        self.map.insert(code.to_string(), word);
+        return true;
+    }*/
+
 }
 
 impl WordCollection for WordCollectionMemory {
 
-    fn find(&self, code: &String) -> Option<&Word> {
+    fn find(&mut self, code: &String) -> Option<&Word> {
+        //let test = self.test(code);
+        //executor::block_on(test);
         return self.map.get(code);
     }
 
@@ -63,7 +77,7 @@ impl WordCollection for WordCollectionMemory {
         let mut filter: Vec<Option<&Word>> = Vec::new();
         for key in keys.clone() {
             if key.contains(code) {
-                filter.push(self.find(key));
+                filter.push(self.map.get(key));
                 if filter.len() == keys.len() || (size.is_some() && (filter.len() as i64) >= size.unwrap()) {
                     return filter;
                 }
