@@ -32,12 +32,22 @@ impl WordCollectionMemory {
         self.map.insert(key, word);
     }
 
-    fn find_single_random(&self) -> Option<&Word> {
-        let mut rng = rand::thread_rng();
-        let keys = self.map.keys().cloned().collect::<Vec<String>>();
-        let position = rng.gen_range(0..keys.len());
-        let key = keys.get(position).unwrap();
-        return self.map.get(key);
+    fn find_random_positions(&self, keys: Vec<String>, size: Option<i64>) ->  Vec<usize>{
+        let mut finish = false;
+        let map_len = self.map.len();
+        let mut position_vector: Vec<usize> = vec![];
+        while !finish {
+            let mut rng = rand::thread_rng();
+            let position = rng.gen_range(0..keys.len());
+            if !position_vector.contains(&position){
+                position_vector.push(position)
+            }
+            if size.is_none() || map_len == position_vector.len() || (position_vector.len() as i64) == size.unwrap() {
+                finish = true;
+            }
+        }
+    
+        return position_vector;
     }
 
 }
@@ -49,11 +59,12 @@ impl WordCollection for WordCollectionMemory {
     }
 
     fn find_includes(&self, code: &String, size: Option<i64>) -> Vec<Option<&Word>> {
+        let keys = self.map.keys();
         let mut filter: Vec<Option<&Word>> = Vec::new();
-        for key in self.map.keys() {
+        for key in keys.clone() {
             if key.contains(code) {
                 filter.push(self.find(key));
-                if size.is_some() && (filter.len() as i64) >= size.unwrap() {
+                if filter.len() == keys.len() || (size.is_some() && (filter.len() as i64) >= size.unwrap()) {
                     return filter;
                 }
             }
@@ -62,17 +73,17 @@ impl WordCollection for WordCollectionMemory {
     }
 
     fn find_random(&self, size: Option<i64>) -> Vec<Option<&Word>> {
-        let mut map: HashMap<String, Option<&Word>> = HashMap::new();
-        let mut finish = false;
-        while !finish {
-            let word = self.find_single_random();
-            let key = word.unwrap().word.clone().unwrap();
-            map.insert(key, word);
-            if size.is_none() || self.map.len() == map.len() || (map.len() as i64) == size.unwrap() {
-                finish = true;
-            }
+        let keys = self.map.keys().cloned().collect::<Vec<String>>();
+        let mut position_vector: Vec<usize> = self.find_random_positions(keys.clone(), size);
+
+        let mut word_vector: Vec<Option<&Word>> = vec![];
+        for position in position_vector.iter_mut() {
+            let key = keys.get(position.clone()).unwrap();
+            let word = self.map.get(key);
+            word_vector.push(word);
         }
-        return map.values().cloned().collect::<Vec<Option<&Word>>>();
+
+        return word_vector;
     }
 
 }

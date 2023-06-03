@@ -1,10 +1,11 @@
 use super::configuration;
 use crate::configuration::collection::Collection;
 use crate::configuration::collection_key::CollectionKey;
-use std::time::SystemTime;
 
+use std::time::SystemTime;
 use rocket::Rocket;
 use rocket::Build;
+use rocket::http::Status;
 
 use rocket::response::status;
 
@@ -15,13 +16,17 @@ pub fn define(build: Rocket<Build>) -> Rocket<Build> {
 }
 
 #[get("/random?<size>")]
-fn word_random(size: Option<i64>) -> status::Accepted<String> {
+fn word_random(size: Option<i64>) -> Result<String, Status>{
+    if size.is_some() && size.unwrap() > 1000 {
+        return Result::Err(Status::NotAcceptable);
+    }
     let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let words = configuration::get_instance().word_collection.find_random(size);
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
     let collection = Collection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: words};
-    status::Accepted(Some(format!("{}", serde_json::to_string(&collection).unwrap())))
+    
+    return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
 }
 
 #[get("/includes/<code>?<size>")]
