@@ -1,5 +1,7 @@
 #[path = "../../commons/dependency.rs"] pub(crate) mod dependency;
 #[path = "../../domain/word_collection.rs"] pub(crate) mod word_collection;
+#[path = "../../domain/collection.rs"] pub(crate) mod collection;
+#[path = "../../domain/collection_key.rs"] pub(crate) mod collection_key;
 #[path = "../../domain/word.rs"] pub(crate) mod word;
 #[path = "diccionary.rs"] mod diccionary;
 

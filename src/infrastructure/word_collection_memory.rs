@@ -32,6 +32,14 @@ impl WordCollectionMemory {
         self.map.insert(key, word);
     }
 
+    fn find_single_random(&self) -> Option<&Word> {
+        let mut rng = rand::thread_rng();
+        let keys = self.map.keys().cloned().collect::<Vec<String>>();
+        let position = rng.gen_range(0..keys.len());
+        let key = keys.get(position).unwrap();
+        return self.map.get(key);
+    }
+
 }
 
 impl WordCollection for WordCollectionMemory {
@@ -40,22 +48,31 @@ impl WordCollection for WordCollectionMemory {
         return self.map.get(code);
     }
 
-    fn find_includes(&self, code: &String) -> Vec<Option<&Word>> {
+    fn find_includes(&self, code: &String, size: Option<i64>) -> Vec<Option<&Word>> {
         let mut filter: Vec<Option<&Word>> = Vec::new();
         for key in self.map.keys() {
             if key.contains(code) {
-                filter.push(self.find(key))
+                filter.push(self.find(key));
+                if size.is_some() && (filter.len() as i64) >= size.unwrap() {
+                    return filter;
+                }
             }
         }
         return filter;
     }
 
-    fn find_random(&self) -> Option<&Word> {
-        let mut rng = rand::thread_rng();
-        let keys = self.map.keys().cloned().collect::<Vec<String>>();
-        let position = rng.gen_range(0..keys.len());
-        let key = keys.get(position).unwrap();
-        return self.map.get(key);
+    fn find_random(&self, size: Option<i64>) -> Vec<Option<&Word>> {
+        let mut map: HashMap<String, Option<&Word>> = HashMap::new();
+        let mut finish = false;
+        while !finish {
+            let word = self.find_single_random();
+            let key = word.unwrap().word.clone().unwrap();
+            map.insert(key, word);
+            if size.is_none() || self.map.len() == map.len() || (map.len() as i64) == size.unwrap() {
+                finish = true;
+            }
+        }
+        return map.values().cloned().collect::<Vec<Option<&Word>>>();
     }
 
 }
