@@ -88,12 +88,16 @@ impl WordCollection for WordCollectionMemory {
         return self.map.get(code);
     }
 
-    fn find_includes(&self, code: &String, size: Option<i64>) -> Vec<&Word> {
+    fn find_includes(&self, code: &String, position: Option<i8>, size: Option<i64>) -> Vec<&Word> {
         let keys = self.map.keys();
         let mut filter: Vec<&Word> = Vec::new();
         for key in keys.clone() {
             let word = self.map.get(key);
-            if key.contains(code) && word.is_some() {
+            let coincidence = 
+                if position.is_some() && position.unwrap() == -1 {key.starts_with(code)} 
+                else if position.is_some() && position.unwrap() == 1 {key.ends_with(code)} 
+                else {key.contains(code)};
+            if coincidence && word.is_some() {
                 filter.push(word.unwrap());
                 if filter.len() == keys.len() || (size.is_some() && (filter.len() as i64) >= size.unwrap()) {
                     return filter;

@@ -31,11 +31,11 @@ fn word_random(size: Option<i64>) -> Result<String, Status>{
     return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
 }
 
-#[get("/includes/<code>?<size>")]
-fn word_includes(code: &str, size: Option<i64>) -> status::Accepted<String> {
+#[get("/includes/<code>?<position>&<size>")]
+fn word_includes(code: &str, position: Option<i8>, size: Option<i64>) -> status::Accepted<String> {
     let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let key = &code.to_string().to_lowercase();
-    let words = configuration::get_instance().word_collection.find_includes(key, size);
+    let words = configuration::get_instance().word_collection.find_includes(key, position, size);
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
     let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();
