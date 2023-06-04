@@ -1,4 +1,4 @@
-word,category,genre,number,root,affix,tonic,syllables,locale,origin,synonyms
+word,category,genre,number,root,affix,tonic,syllables,locale,origin,synonyms,meaning
 Abad,nombre/topónimo,,,Abad,,1,A *bad,es_ES,./toponimos/l10n/es_ES/toponimos-municipios.txt,
 Abona,nombre/topónimo,,,Abona,,2,A bo *na,es_ES,./toponimos/l10n/es_ES/toponimos-municipios.txt,
 Adeje,nombre/topónimo,,,Adeje,,2,A de *je,es_ES,./toponimos/l10n/es_ES/toponimos-municipios.txt,
