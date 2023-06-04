@@ -5,16 +5,16 @@ use serde::Serialize;
 #[allow(dead_code)]
 //TODO: Rewrite.
 pub struct Word {
-    pub word: Option<String>,
-    pub category: Option<String>,
-    pub genre: Option<String>,
-    pub number: Option<String>,
-    pub root: Option<String>,
-    pub affix: Option<String>, 
-    pub tonic: Option<String>, 
-    pub syllables: Option<String>, 
-    pub locale: Option<String>, 
-    pub origin: Option<String>, 
-    pub synonyms: Option<String>,
-    pub meaning: Option<String>
+    pub word: String,
+    pub category: String,
+    pub genre: String,
+    pub number: String,
+    pub root: String,
+    pub affix: String, 
+    pub tonic: String, 
+    pub syllables: String, 
+    pub locale: String, 
+    pub origin: String, 
+    pub synonyms: String,
+    pub meaning: String
 }

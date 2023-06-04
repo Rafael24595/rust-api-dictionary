@@ -2,6 +2,7 @@
 #[path = "../../domain/word_collection.rs"] pub(crate) mod word_collection;
 #[path = "../../domain/collection.rs"] pub(crate) mod collection;
 #[path = "../../domain/collection_key.rs"] pub(crate) mod collection_key;
+#[path = "../../infrastructure/dto/dto_word.rs"] pub(crate) mod dto_word;
 #[path = "../../domain/word.rs"] pub(crate) mod word;
 #[path = "diccionary.rs"] mod diccionary;
 

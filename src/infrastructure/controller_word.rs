@@ -17,7 +17,7 @@ pub fn define(build: Rocket<Build>) -> Rocket<Build> {
 
 #[get("/random?<size>")]
 fn word_random(size: Option<i64>) -> Result<String, Status>{
-    if size.is_some() && size.unwrap() > 1000 {
+    if size.is_some() && size.unwrap() > 100 {
         return Result::Err(Status::NotAcceptable);
     }
     let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
@@ -41,8 +41,11 @@ fn word_includes(code: &str, size: Option<i64>) -> status::Accepted<String> {
 }
 
 #[get("/<code>")]
-fn word(code: &str) -> status::Accepted<String> {
+fn word(code: &str) -> Result<String, Status> {
     let key = &code.to_string().to_lowercase();
     let word = configuration::get_instance().word_collection.find(key);
-    status::Accepted(Some(format!("{}", serde_json::to_string(&word).unwrap())))
+    if word.is_none() {
+        return Result::Err(Status::NotFound);
+    }
+    return Result::Ok(format!("{}", serde_json::to_string(&word).unwrap()));
 }
