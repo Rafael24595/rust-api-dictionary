@@ -16,8 +16,8 @@ pub struct WordCollectionMemory {
     enable_rebuild: bool
 }
 
-const SOURCE_PATH: &str = "./assets/Dictionary_es.csv";
-const SOURCE_PATH_RESULT: &str = "./assets/Dictionary_es_Res.csv";
+const SOURCE_PATH: &str = "./assets/dictionary_es.csv";
+const SOURCE_PATH_UPDATED: &str = "./assets/dictionary_updated_es.csv";
 
 unsafe impl Send for WordCollectionMemory{}
 unsafe impl Sync for WordCollectionMemory{}
@@ -125,13 +125,11 @@ impl Dependency for WordCollectionMemory {
 
     fn on_exit(&mut self) -> Result<(), Box<dyn Error>> {
         if self.enable_rebuild {
-            let mut writer = csv::Writer::from_path(SOURCE_PATH_RESULT)?;
+            let mut writer = csv::Writer::from_path(SOURCE_PATH_UPDATED)?;
     
             let _ = writer.write_record(&self.headers);
-    
             for value in self.map.values() {
-                let v = value.clone();
-                let _  = writer.write_record(&[v.word,v.category,v.genre,v.number,v.root,v.affix,v.tonic,v.syllables,v.locale,v.origin,v.synonyms,v.meaning.join("#")]);
+                let _  = writer.write_record(value.as_vector());
             }
     
             writer.flush()?;
@@ -146,28 +144,7 @@ impl Dependency for WordCollectionMemory {
         for result in reader.deserialize() {
             let dto: DTOWord = result?;
             if dto.word.is_some() {
-                let mut descs: Vec<String> = Vec::new();
-
-                if dto.meaning.is_some() {
-                    for part in dto.meaning.unwrap().split("#") {
-                        descs.push(part.to_string());
-                    }
-                }
-
-                let word = Word {
-                    word: if dto.word.is_some() {dto.word.unwrap()} else {String::new()},
-                    category: if dto.category.is_some() {dto.category.unwrap()} else {String::new()},
-                    genre: if dto.genre.is_some() {dto.genre.unwrap()} else {String::new()},
-                    number: if dto.number.is_some() {dto.number.unwrap()} else {String::new()},
-                    root: if dto.root.is_some() {dto.root.unwrap()} else {String::new()},
-                    affix: if dto.affix.is_some() {dto.affix.unwrap()} else {String::new()},
-                    tonic: if dto.tonic.is_some() {dto.tonic.unwrap()} else {String::new()},
-                    syllables: if dto.syllables.is_some() {dto.syllables.unwrap()} else {String::new()},
-                    locale: if dto.locale.is_some() {dto.locale.unwrap()} else {String::new()},
-                    origin: if dto.origin.is_some() {dto.origin.unwrap()} else {String::new()},
-                    synonyms: if dto.synonyms.is_some() {dto.synonyms.unwrap()} else {String::new()},
-                    meaning: descs
-                };
+                let word = Word::from_dto(dto);
                 self.insert(word);
             }
         }

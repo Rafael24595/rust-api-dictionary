@@ -1,7 +1,7 @@
 #[path = "../../commons/dependency.rs"] pub(crate) mod dependency;
 #[path = "../../domain/word_collection.rs"] pub(crate) mod word_collection;
-#[path = "../../domain/collection.rs"] pub(crate) mod collection;
-#[path = "../../domain/collection_key.rs"] pub(crate) mod collection_key;
+#[path = "../../infrastructure/dto/dto_anonymous_collection.rs"] pub(crate) mod dto_anonymous_collection;
+#[path = "../../infrastructure/dto/dto_collection.rs"] pub(crate) mod dto_collection;
 #[path = "../../infrastructure/dto/dto_word.rs"] pub(crate) mod dto_word;
 #[path = "../../domain/word.rs"] pub(crate) mod word;
 #[path = "diccionary.rs"] pub(crate) mod diccionary;
@@ -19,6 +19,10 @@ pub struct Configuration {
 
 lazy_static! {
     static ref INSTANCE: Mutex<Option<Box<Configuration>>> = Mutex::new(None);
+}
+
+pub fn load() -> &'static mut Configuration {
+    return get_instance();
 }
 
 pub fn get_instance() -> &'static mut Configuration {

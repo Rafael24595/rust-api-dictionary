@@ -1,6 +1,7 @@
 use super::configuration;
-use crate::configuration::collection::Collection;
-use crate::configuration::collection_key::CollectionKey;
+use crate::configuration::dto_anonymous_collection::DTOAnonymousCollection;
+use crate::configuration::dto_collection::DTOCollection;
+use crate::configuration::dto_word::DTOWord;
 
 use std::time::SystemTime;
 use rocket::Rocket;
@@ -24,7 +25,8 @@ fn word_random(size: Option<i64>) -> Result<String, Status>{
     let words = configuration::get_instance().word_collection.find_random(size);
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
-    let collection = Collection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: words};
+    let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();
+    let collection = DTOAnonymousCollection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: dtos};
     
     return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
 }
@@ -36,7 +38,8 @@ fn word_includes(code: &str, size: Option<i64>) -> status::Accepted<String> {
     let words = configuration::get_instance().word_collection.find_includes(key, size);
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
-    let collection = CollectionKey{key: code.to_string(), size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: words};
+    let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();
+    let collection = DTOCollection{key: code.to_string(), size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: dtos};
     status::Accepted(Some(format!("{}", serde_json::to_string(&collection).unwrap())))
 }
 
