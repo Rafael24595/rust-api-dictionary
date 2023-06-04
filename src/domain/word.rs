@@ -16,5 +16,5 @@ pub struct Word {
     pub locale: String, 
     pub origin: String, 
     pub synonyms: String,
-    pub meaning: String
+    pub meaning: Vec<String>
 }

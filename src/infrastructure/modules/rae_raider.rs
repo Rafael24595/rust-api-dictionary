@@ -1,8 +1,9 @@
 use scraper::{Html, Selector, ElementRef, CaseSensitivity, Node};
 use ego_tree::{NodeRef};
-use regex::Regex;
+use tokio::task::block_in_place;
 use reqwest;
 use reqwest::header::USER_AGENT;
+use regex::Regex;
 
 #[allow(dead_code)]
 pub struct RaeRaider {
@@ -31,10 +32,11 @@ impl RaeRaider {
         }
     }
 
-    pub async fn load(&mut self) -> Result<bool, Box<dyn std::error::Error>> {
+    pub fn load(&mut self) -> Result<bool, Box<dyn std::error::Error>> {
         let mut status = false;
         if self.html.is_none() {
-            self.html = Option::Some(self.html_request().await?);
+            let req = self.html_request();
+            self.html = Option::Some(req.unwrap());
             status = true;
         }
         Ok(status)
@@ -127,17 +129,23 @@ impl RaeRaider {
         return word;
     }
 
-    async fn html_request(&self) -> Result<Html, Box<dyn std::error::Error>> {
+    fn html_request(&self) -> Result<Html, Box<dyn std::error::Error>> {
         let domain = DOMAIN.to_string();
         let query_params = QUERY_PARAMS.to_string();
-        let url = domain + &self.code + &"?".to_string() + &query_params;
-        let client = reqwest::Client::new();
-        let html = client
-            .get(url)
-            .header(USER_AGENT, BROWSER_AGENT)
-            .send().await?.text().await?;
-        
-        Ok(Html::parse_fragment(html.as_str()))
+        let url = format!("{}{}?{}", domain, self.code, query_params);
+
+        let html = block_in_place::<_, Result<_, reqwest::Error>>(|| {
+            let client = reqwest::blocking::Client::new();
+            let response = client
+                .get(&url)
+                .header(USER_AGENT, BROWSER_AGENT)
+                .send()?;
+            let html = response.text()?;
+            Ok(Html::parse_fragment(&html))
+        })?;
+
+        Ok(html)
     }
 
+    
 }
