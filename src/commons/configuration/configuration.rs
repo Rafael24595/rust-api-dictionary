@@ -9,11 +9,17 @@
 use word_collection::WordCollection;
 use dependency::Dependency;
 
-use std::env;
+use std::{env, time::SystemTime};
 use lazy_static::lazy_static;
 use std::{sync::Mutex, collections::HashMap};
 
+const SERVICE_NAME: &str = "RUST-DICTIONARY";
+
 pub struct Configuration {
+    pub timestamp: u128,
+    pub session_id: String,
+    pub address: String,
+    pub port: u16,
     pub word_collection: Box<dyn WordCollection>
 }
 
@@ -42,15 +48,22 @@ pub fn get_instance() -> &'static mut Configuration {
 }
 
 fn build_configuration(args: HashMap<String, String>) -> Configuration {
-    let mut collection = diccionary::get_collection(args);
+    let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis();
+    let session_id = SERVICE_NAME.to_string() + "-" + &timestamp.to_string();
+    let address = args.get("ROCKET_ADDRESS").unwrap().clone();
+    let port = args.get("ROCKET_PORT").unwrap().clone().parse::<u16>().unwrap();
 
+    let mut collection = diccionary::get_collection(args.clone());
     if let Err(e) = collection.on_init() {
         eprintln!("{}", e);
     }
-
     let word_collection = Box::new(collection);
 
     return Configuration {
+        timestamp,
+        session_id,
+        address,
+        port,
         word_collection
     };
 }

@@ -9,12 +9,25 @@ use dotenv::dotenv;
 async fn main() {
     dotenv().ok();
     
+    let _ = on_init();
+    let _ = serve().await;
+    let _ = on_exit();
+}
+
+fn on_init() {
     configuration::load();
-    let mut build = rocket::build();
+}
+
+async fn serve() {
+    let configuration = configuration::get_instance();
+
+    let figment = rocket::Config::figment()
+        .merge(("address", configuration.address.clone()))
+        .merge(("port", configuration.port.clone()));
+
+    let mut build = rocket::custom(figment);
     build = controller_word::define(build);
     let _ = build.launch().await;
-
-    on_exit();
 }
 
 fn on_exit() {
