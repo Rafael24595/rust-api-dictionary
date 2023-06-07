@@ -79,6 +79,45 @@ impl WordCollectionMemory {
         return false;
     }
 
+    fn find_permute_includes(&mut self, code: String, size: &mut Option<i64>, includes: Option<i8>) -> Vec<Word> {
+        let mut code_vector: Vec<Word> = vec![];
+        let includes_vector = self.find_includes(&code, includes, size.clone());
+        for word in includes_vector {
+            code_vector.push(word.clone());
+            if size.is_some() {
+                let _ = size.insert(size.unwrap() - 1);
+            }
+        }
+        return code_vector;
+    }
+
+    fn find_permute_basic(&mut self, code: String, size: &mut Option<i64>) -> Vec<Word> {
+        let mut code_vector: Vec<Word> = vec![];
+        let word = self.map.get(&code);
+        if word.is_some() {
+            code_vector.push(word.unwrap().clone());
+            if size.is_some() {
+                let _ = size.insert(size.unwrap() - 1);
+            }
+        }
+        return code_vector;
+    }
+
+    fn find_permute_unrecognized(&mut self, code: String, size: &mut Option<i64>) -> Vec<Word> {
+        let mut code_vector: Vec<Word> = vec![];
+        let mut new_word = Word::empty();
+        new_word.word = code;
+        new_word.category = "rust-dictionary-permutation".to_string();
+        code_vector.push(new_word);
+
+        if size.is_some() {
+            let _ = size.insert(size.unwrap() - 1);
+        }
+        return code_vector;
+    }
+
+    
+
 }
 
 impl WordCollection for WordCollectionMemory {
@@ -126,36 +165,20 @@ impl WordCollection for WordCollectionMemory {
     fn find_permute(&mut self, combo: &String, min: Option<i8>, size: Option<i64>, exists: Option<bool>, includes: Option<i8>) -> Vec<Word> {
         let permute = ComboPermuter::new(combo.to_string(), min);
         let mut word_vector: Vec<Word> = vec![];
-        let mut size_copy = size.clone();
+        let size_copy = &mut size.clone();
         for code in permute.permute() {
             let mut code_vector: Vec<Word> = vec![];
             if includes.is_some() {
-                let includes_vector = self.find_includes(&code, includes, size_copy);
-                for word in includes_vector {
-                    code_vector.push(word.clone());
-                    if size_copy.is_some() {
-                        size_copy = Some(size_copy.unwrap() - 1);
-                    }
-                }
+                let mut result = self.find_permute_includes(code.clone(), size_copy, includes);
+                code_vector.append(&mut result);
             } else {
-                let word = self.map.get(&code);
-                if word.is_some() {
-                    code_vector.push(word.unwrap().clone());
-                    if size_copy.is_some() {
-                        size_copy = Some(size_copy.unwrap() - 1);
-                    }
-                }
+                let mut result = self.find_permute_basic(code.clone(), size_copy);
+                code_vector.append(&mut result);
             }
 
-            if code_vector.is_empty() && exists.is_some() && !exists.unwrap() {
-                let mut new_word = Word::empty();
-                new_word.word = code;
-                new_word.category = "rust-dictionary-permutation".to_string();
-                word_vector.push(new_word);
-
-                if size_copy.is_some() {
-                    size_copy = Some(size_copy.unwrap() - 1);
-                }
+            if exists.is_some() && !exists.unwrap() && code_vector.is_empty() {
+                let mut result = self.find_permute_unrecognized(code.clone(), size_copy);
+                code_vector.append(&mut result);
             }
 
             word_vector.append(&mut code_vector);
