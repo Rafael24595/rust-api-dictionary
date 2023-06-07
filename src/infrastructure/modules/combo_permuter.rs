@@ -1,5 +1,5 @@
 pub struct ComboPermuter {
-    combo: String,
+    combo: String
 }
 
 impl ComboPermuter {

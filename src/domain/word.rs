@@ -25,6 +25,23 @@ pub struct Word {
 
 impl Word {
     
+    pub fn empty() -> Word {
+        return Word {
+            word: String::new(),
+            category: String::new(),
+            genre: String::new(),
+            number: String::new(),
+            root: String::new(),
+            affix: String::new(),
+            tonic: String::new(),
+            syllables: String::new(),
+            locale: String::new(),
+            origin: String::new(),
+            synonyms: String::new(),
+            meaning: Vec::new()
+        };
+    }
+
     pub fn from_dto(dto: DTOWord) -> Word {
         let word = if dto.word.is_some() {dto.word.unwrap()} else {String::new()};
         let category = if dto.category.is_some() {dto.category.unwrap()} else {String::new()};

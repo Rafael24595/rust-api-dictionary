@@ -123,13 +123,21 @@ impl WordCollection for WordCollectionMemory {
         return word_vector;
     }
 
-    fn find_permute(&mut self, combo: &String) -> Vec<&Word> {
+    fn find_permute(&mut self, combo: &String, size: Option<i64>, exists: Option<bool>) -> Vec<Word> {
         let permute = ComboPermuter::new(combo.to_string());
-        let mut word_vector: Vec<&Word> = vec![];
+        let mut word_vector: Vec<Word> = vec![];
         for code in permute.permute() {
             let word = self.map.get(&code);
             if word.is_some() {
-                word_vector.push(word.unwrap());
+                word_vector.push(word.unwrap().clone());
+            } else if exists.is_some() && !exists.unwrap() {
+                let mut new_word = Word::empty();
+                new_word.word = code;
+                new_word.word = "rust-dictionary-permutation".to_string();
+                word_vector.push(new_word);
+            }
+            if size.is_some() && (word_vector.len() as i64) >= size.unwrap() {
+                return word_vector;
             }
         }
         return word_vector; 

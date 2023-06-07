@@ -14,6 +14,7 @@ pub fn define(build: Rocket<Build>) -> Rocket<Build> {
     build.mount("/word", routes![word])
          .mount("/word", routes![word_includes])
          .mount("/word", routes![word_random])
+         .mount("/word", routes![word_permute])
 }
 
 #[get("/random?<size>")]
@@ -23,6 +24,18 @@ fn word_random(size: Option<i64>) -> Result<String, Status>{
     }
     let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let words = configuration::get_instance().word_collection.find_random(size);
+    let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    let time = finish - start;
+    let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();
+    let collection = DTOAnonymousCollection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: dtos};
+    
+    return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
+}
+
+#[get("/permute/<combo>?<size>&<exists>")]
+fn word_permute(combo: &str, size: Option<i64>, exists: Option<bool>) -> Result<String, Status>{
+    let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    let words = configuration::get_instance().word_collection.find_permute(&combo.to_string(), size, exists);
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
     let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();
