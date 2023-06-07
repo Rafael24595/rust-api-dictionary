@@ -32,10 +32,13 @@ fn word_random(size: Option<i64>) -> Result<String, Status>{
     return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
 }
 
-#[get("/permute/<combo>?<size>&<exists>")]
-fn word_permute(combo: &str, size: Option<i64>, exists: Option<bool>) -> Result<String, Status>{
+#[get("/permute/<combo>?<size>&<exists>&<includes>")]
+fn word_permute(combo: &str, size: Option<i64>, exists: Option<bool>, includes: Option<i8>) -> Result<String, Status>{
+    if includes.is_some() && (size.is_none() || size.is_some() && size.unwrap() > 100000) {
+        return Result::Err(Status::NotAcceptable);
+    }
     let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
-    let words = configuration::get_instance().word_collection.find_permute(&combo.to_string(), size, exists);
+    let words = configuration::get_instance().word_collection.find_permute(&combo.to_string(), size, exists, includes);
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
     let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();

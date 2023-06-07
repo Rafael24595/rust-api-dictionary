@@ -123,23 +123,48 @@ impl WordCollection for WordCollectionMemory {
         return word_vector;
     }
 
-    fn find_permute(&mut self, combo: &String, size: Option<i64>, exists: Option<bool>) -> Vec<Word> {
+    fn find_permute(&mut self, combo: &String, size: Option<i64>, exists: Option<bool>, includes: Option<i8>) -> Vec<Word> {
         let permute = ComboPermuter::new(combo.to_string());
         let mut word_vector: Vec<Word> = vec![];
+        let mut size_copy = size.clone();
         for code in permute.permute() {
-            let word = self.map.get(&code);
-            if word.is_some() {
-                word_vector.push(word.unwrap().clone());
-            } else if exists.is_some() && !exists.unwrap() {
+            let mut code_vector: Vec<Word> = vec![];
+            if includes.is_some() {
+                let includes_vector = self.find_includes(&code, includes, size_copy);
+                for word in includes_vector {
+                    code_vector.push(word.clone());
+                    if size_copy.is_some() {
+                        size_copy = Some(size_copy.unwrap() - 1);
+                    }
+                }
+            } else {
+                let word = self.map.get(&code);
+                if word.is_some() {
+                    code_vector.push(word.unwrap().clone());
+                    if size_copy.is_some() {
+                        size_copy = Some(size_copy.unwrap() - 1);
+                    }
+                }
+            }
+
+            if code_vector.is_empty() && exists.is_some() && !exists.unwrap() {
                 let mut new_word = Word::empty();
                 new_word.word = code;
                 new_word.category = "rust-dictionary-permutation".to_string();
                 word_vector.push(new_word);
+
+                if size_copy.is_some() {
+                    size_copy = Some(size_copy.unwrap() - 1);
+                }
             }
-            if size.is_some() && (word_vector.len() as i64) >= size.unwrap() {
+
+            word_vector.append(&mut code_vector);
+
+            if size_copy.is_some() && size_copy.unwrap() <= 0 {
                 return word_vector;
-            }
+            }         
         }
+
         return word_vector; 
     }
 
