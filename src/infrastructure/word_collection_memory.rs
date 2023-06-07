@@ -133,7 +133,7 @@ impl WordCollection for WordCollectionMemory {
             } else if exists.is_some() && !exists.unwrap() {
                 let mut new_word = Word::empty();
                 new_word.word = code;
-                new_word.word = "rust-dictionary-permutation".to_string();
+                new_word.category = "rust-dictionary-permutation".to_string();
                 word_vector.push(new_word);
             }
             if size.is_some() && (word_vector.len() as i64) >= size.unwrap() {
