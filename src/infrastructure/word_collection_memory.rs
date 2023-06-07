@@ -8,7 +8,7 @@ use crate::configuration::dependency::Dependency;
 use crate::configuration::word::Word;
 use crate::configuration::dto_word::DTOWord;
 use crate::configuration::diccionary::rae_raider::RaeRaider;
-use crate::configuration::diccionary::permute_combo::PermuteCombo;
+use crate::configuration::diccionary::combo_permuter::ComboPermuter;
 
 #[allow(dead_code)]
 pub struct WordCollectionMemory {
@@ -124,7 +124,7 @@ impl WordCollection for WordCollectionMemory {
     }
 
     fn find_permute(&mut self, combo: &String) -> Vec<&Word> {
-        let permute = PermuteCombo::new(combo.to_string());
+        let permute = ComboPermuter::new(combo.to_string());
         let mut word_vector: Vec<&Word> = vec![];
         for code in permute.permute() {
             let word = self.map.get(&code);
