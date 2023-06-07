@@ -1,12 +1,18 @@
 pub struct ComboPermuter {
-    combo: String
+    combo: String,
+    min: i8
 }
 
 impl ComboPermuter {
 
-    pub fn new(combo: String) -> ComboPermuter {
+    pub fn new(combo: String, min: Option<i8>) -> ComboPermuter {
+        let mut min_base = 3;
+        if min.is_some() && min.unwrap() > 0 {
+            min_base = min.unwrap();
+        }
         return ComboPermuter {
-            combo
+            combo: combo,
+            min: min_base
         }
     }
 
@@ -17,8 +23,10 @@ impl ComboPermuter {
     }
 
     fn build_permutations(&self, result: &mut Vec<String>, current: &mut Vec<usize>) {
-        let permutation = self.build_current(current);
-        result.push(permutation);
+        if (current.len() as i8) >= self.min {
+            let permutation = self.build_current(current);
+            result.push(permutation);
+        }
 
         if current.len() == self.combo.len() {
             return;

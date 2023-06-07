@@ -123,8 +123,8 @@ impl WordCollection for WordCollectionMemory {
         return word_vector;
     }
 
-    fn find_permute(&mut self, combo: &String, size: Option<i64>, exists: Option<bool>, includes: Option<i8>) -> Vec<Word> {
-        let permute = ComboPermuter::new(combo.to_string());
+    fn find_permute(&mut self, combo: &String, min: Option<i8>, size: Option<i64>, exists: Option<bool>, includes: Option<i8>) -> Vec<Word> {
+        let permute = ComboPermuter::new(combo.to_string(), min);
         let mut word_vector: Vec<Word> = vec![];
         let mut size_copy = size.clone();
         for code in permute.permute() {
