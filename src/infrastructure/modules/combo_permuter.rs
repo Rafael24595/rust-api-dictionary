@@ -6,7 +6,7 @@ pub struct ComboPermuter {
 impl ComboPermuter {
 
     pub fn new(combo: String, min: Option<i8>) -> ComboPermuter {
-        let mut min_base = 3;
+        let mut min_base = combo.len() as i8;
         if min.is_some() && min.unwrap() > 0 {
             min_base = min.unwrap();
         }
