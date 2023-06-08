@@ -25,7 +25,9 @@ impl ComboPermuter {
     fn build_permutations(&self, result: &mut Vec<String>, current: &mut Vec<usize>) {
         if (current.len() as i8) >= self.min {
             let permutation = self.build_current(current);
-            result.push(permutation);
+            if result.iter().position(|ci| ci.eq_ignore_ascii_case(&permutation)).is_none() {
+                result.push(permutation);
+            }
         }
 
         if current.len() == self.combo.len() {
