@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use csv::{self, StringRecord};
 use std::error::Error;
 use rand::Rng;
+use unidecode::unidecode;
 
 use crate::configuration::word_collection::WordCollection;
 use crate::configuration::dependency::Dependency;
@@ -127,6 +128,21 @@ impl WordCollection for WordCollectionMemory {
         return self.map.get(code);
     }
 
+    fn find_lax(&self, code: &String) -> Vec<&Word> {
+        let mut filter: Vec<&Word> = Vec::new();
+        let word_strict = self.map.get(code);
+        if word_strict.is_some() {
+            filter.push(&word_strict.unwrap());
+        }
+        for word_lax in self.map.values() {
+            let in_filter = filter.iter().any(|&i| i.word.eq(&word_lax.word));
+            if word_lax.unicode.to_lowercase().eq(code) && !in_filter {
+                filter.push(word_lax);
+            }
+        }
+        return filter;
+    }
+
     fn find_includes(&self, code: &String, position: Option<i8>, size: Option<i64>) -> Vec<&Word> {
         let keys = self.map.keys();
         let mut filter: Vec<&Word> = Vec::new();
@@ -200,7 +216,10 @@ impl Dependency for WordCollectionMemory {
             let mut writer = csv::Writer::from_path(SOURCE_PATH_UPDATED)?;
     
             let _ = writer.write_record(&self.headers);
-            for value in self.map.values() {
+
+            let mut collection: Vec<&Word> = self.map.values().collect();
+            collection.sort_by(|a, b| a.word.to_lowercase().cmp(&b.word.to_lowercase()));
+            for value in collection {
                 let _  = writer.write_record(value.as_vector());
             }
     
@@ -214,8 +233,11 @@ impl Dependency for WordCollectionMemory {
         self.headers = reader.headers()?.clone();
 
         for result in reader.deserialize() {
-            let dto: DTOWord = result?;
+            let mut dto: DTOWord = result?;
             if dto.word.is_some() {
+                if dto.unicode.is_none() {
+                    dto.unicode = Some(unidecode(&dto.word.clone().unwrap()));
+                }
                 let word = Word::from_dto(dto);
                 self.insert(word);
             }

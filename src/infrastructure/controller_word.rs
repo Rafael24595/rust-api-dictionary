@@ -8,10 +8,9 @@ use rocket::Rocket;
 use rocket::Build;
 use rocket::http::Status;
 
-use rocket::response::status;
-
 pub fn define(build: Rocket<Build>) -> Rocket<Build> {
     build.mount("/word", routes![word])
+         .mount("/word", routes![word_lax])
          .mount("/word", routes![word_includes])
          .mount("/word", routes![word_random])
          .mount("/word", routes![word_permute])
@@ -48,7 +47,7 @@ fn word_permute(combo: &str, min: Option<i8>, size: Option<i64>, exists: Option<
 }
 
 #[get("/includes/<code>?<position>&<size>")]
-fn word_includes(code: &str, position: Option<i8>, size: Option<i64>) -> status::Accepted<String> {
+fn word_includes(code: &str, position: Option<i8>, size: Option<i64>) -> Result<String, Status> {
     let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let key = &code.to_string().to_lowercase();
     let words = configuration::get_instance().word_collection.find_includes(key, position, size);
@@ -56,7 +55,22 @@ fn word_includes(code: &str, position: Option<i8>, size: Option<i64>) -> status:
     let time = finish - start;
     let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();
     let collection = DTOCollection{key: code.to_string(), size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: dtos};
-    status::Accepted(Some(format!("{}", serde_json::to_string(&collection).unwrap())))
+    return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
+}
+
+#[get("/lax/<code>")]
+fn word_lax(code: &str) -> Result<String, Status> {
+    let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    let key = &code.to_string().to_lowercase();
+    let words = configuration::get_instance().word_collection.find_lax(key);
+    if words.len() == 0 {
+        return Result::Err(Status::NotFound);
+    }
+    let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    let time = finish - start;
+    let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();
+    let collection = DTOCollection{key: code.to_string(), size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: dtos};
+    return Result::Ok(format!("{}", format!("{}", serde_json::to_string(&collection).unwrap())));
 }
 
 #[get("/<code>")]

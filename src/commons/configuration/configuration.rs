@@ -6,6 +6,8 @@
 #[path = "../../domain/word.rs"] pub(crate) mod word;
 #[path = "diccionary.rs"] pub(crate) mod diccionary;
 
+extern crate unidecode;
+
 use word_collection::WordCollection;
 use dependency::Dependency;
 

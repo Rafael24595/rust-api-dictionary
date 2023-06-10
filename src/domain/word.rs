@@ -10,6 +10,7 @@ const SEPARATOR: &str = "#";
 //TODO: Rewrite.
 pub struct Word {
     pub word: String,
+    pub unicode: String,
     pub category: String,
     pub genre: String,
     pub number: String,
@@ -28,6 +29,7 @@ impl Word {
     pub fn empty() -> Word {
         return Word {
             word: String::new(),
+            unicode: String::new(),
             category: String::new(),
             genre: String::new(),
             number: String::new(),
@@ -44,6 +46,7 @@ impl Word {
 
     pub fn from_dto(dto: DTOWord) -> Word {
         let word = if dto.word.is_some() {dto.word.unwrap()} else {String::new()};
+        let unicode = if dto.unicode.is_some() {dto.unicode.unwrap()} else {String::new()};
         let category = if dto.category.is_some() {dto.category.unwrap()} else {String::new()};
         let genre = if dto.genre.is_some() {dto.genre.unwrap()} else {String::new()};
         let number = if dto.number.is_some() {dto.number.unwrap()} else {String::new()};
@@ -63,7 +66,7 @@ impl Word {
         }
 
         return Word {
-            word, category, genre, number, root, affix, tonic, syllables, locale, origin, synonyms, meaning
+            word, unicode, category, genre, number, root, affix, tonic, syllables, locale, origin, synonyms, meaning
         };
     }
 
@@ -71,6 +74,7 @@ impl Word {
         let v = self.clone();
         return vec![
             v.word,
+            v.unicode,
             v.category,
             v.genre,
             v.number,
@@ -88,6 +92,7 @@ impl Word {
         let v = self.clone();
         return DTOWord{
             word: Option::Some(v.word),
+            unicode: Option::Some(v.unicode),
             category: Option::Some(v.category),
             genre: Option::Some(v.genre),
             number: Option::Some(v.number),
