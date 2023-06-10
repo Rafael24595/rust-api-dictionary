@@ -149,15 +149,13 @@ impl WordCollection for WordCollectionMemory {
         for key in keys.clone() {
             let word = self.map.get(key);
             let in_filter = filter.iter().any(|&i| i.word.eq(&word.unwrap().word));
-            if word.is_some() && !in_filter {
-                let word = word.unwrap();
-                let unidecode = word.unicode.to_lowercase();
-                let coincidence = 
-                    if position.is_some() && position.unwrap() == -1 {key.starts_with(code) || (lax.is_some() && lax.unwrap() && unidecode.starts_with(code)) } 
-                    else if position.is_some() && position.unwrap() == 1 {key.ends_with(code) || (lax.is_some() && lax.unwrap() && unidecode.ends_with(code)) } 
-                    else {key.contains(code) || (lax.is_some() && lax.unwrap() && unidecode.contains(code)) };
+            if !in_filter {
+                let coincidence = word.is_some() &&
+                    if position.is_some() && position.unwrap() == -1 {key.starts_with(code) || (lax.is_some() && lax.unwrap() && word.unwrap().unicode.to_lowercase().starts_with(code)) } 
+                    else if position.is_some() && position.unwrap() == 1 {key.ends_with(code) || (lax.is_some() && lax.unwrap() && word.unwrap().unicode.to_lowercase().ends_with(code)) } 
+                    else {key.contains(code) || (lax.is_some() && lax.unwrap() && word.unwrap().unicode.to_lowercase().contains(code)) };
                 if coincidence {
-                    filter.push(word);
+                    filter.push(word.unwrap());
                     if filter.len() == keys.len() || (size.is_some() && (filter.len() as i64) >= size.unwrap()) {
                         return filter;
                     }
