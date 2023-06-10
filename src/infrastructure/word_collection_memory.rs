@@ -82,7 +82,7 @@ impl WordCollectionMemory {
 
     fn find_permute_includes(&mut self, code: String, size: &mut Option<i64>, includes: Option<i8>) -> Vec<Word> {
         let mut code_vector: Vec<Word> = vec![];
-        let includes_vector = self.find_includes(&code, includes, size.clone());
+        let includes_vector = self.find_includes(&code, includes, Option::None, size.clone());
         for word in includes_vector {
             code_vector.push(word.clone());
             if size.is_some() {
@@ -143,19 +143,24 @@ impl WordCollection for WordCollectionMemory {
         return filter;
     }
 
-    fn find_includes(&self, code: &String, position: Option<i8>, size: Option<i64>) -> Vec<&Word> {
+    fn find_includes(&self, code: &String, position: Option<i8>, lax: Option<bool>, size: Option<i64>) -> Vec<&Word> {
         let keys = self.map.keys();
         let mut filter: Vec<&Word> = Vec::new();
         for key in keys.clone() {
             let word = self.map.get(key);
-            let coincidence = 
-                if position.is_some() && position.unwrap() == -1 {key.starts_with(code)} 
-                else if position.is_some() && position.unwrap() == 1 {key.ends_with(code)} 
-                else {key.contains(code)};
-            if coincidence && word.is_some() {
-                filter.push(word.unwrap());
-                if filter.len() == keys.len() || (size.is_some() && (filter.len() as i64) >= size.unwrap()) {
-                    return filter;
+            let in_filter = filter.iter().any(|&i| i.word.eq(&word.unwrap().word));
+            if word.is_some() && !in_filter {
+                let word = word.unwrap();
+                let unidecode = word.unicode.to_lowercase();
+                let coincidence = 
+                    if position.is_some() && position.unwrap() == -1 {key.starts_with(code) || (lax.is_some() && lax.unwrap() && unidecode.starts_with(code)) } 
+                    else if position.is_some() && position.unwrap() == 1 {key.ends_with(code) || (lax.is_some() && lax.unwrap() && unidecode.ends_with(code)) } 
+                    else {key.contains(code) || (lax.is_some() && lax.unwrap() && unidecode.contains(code)) };
+                if coincidence {
+                    filter.push(word);
+                    if filter.len() == keys.len() || (size.is_some() && (filter.len() as i64) >= size.unwrap()) {
+                        return filter;
+                    }
                 }
             }
         }

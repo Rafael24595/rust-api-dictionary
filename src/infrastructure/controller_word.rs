@@ -46,11 +46,11 @@ fn word_permute(combo: &str, min: Option<i8>, size: Option<i64>, exists: Option<
     return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
 }
 
-#[get("/includes/<code>?<position>&<size>")]
-fn word_includes(code: &str, position: Option<i8>, size: Option<i64>) -> Result<String, Status> {
+#[get("/includes/<code>?<position>&<lax>&<size>")]
+fn word_includes(code: &str, position: Option<i8>, lax: Option<bool>, size: Option<i64>) -> Result<String, Status> {
     let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let key = &code.to_string().to_lowercase();
-    let words = configuration::get_instance().word_collection.find_includes(key, position, size);
+    let words = configuration::get_instance().word_collection.find_includes(key, position, lax, size);
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
     let dtos: Vec<DTOWord> = words.iter().map(|word| word.as_dto()).collect();
