@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use csv::{self, StringRecord};
 use std::error::Error;
 use rand::Rng;
@@ -6,7 +6,7 @@ use unidecode::unidecode;
 
 use crate::configuration::word_collection::WordCollection;
 use crate::configuration::dependency::Dependency;
-use crate::configuration::word::Word;
+use crate::configuration::word::{Word};
 use crate::configuration::dto_word::DTOWord;
 use crate::configuration::diccionary::rae_raider::RaeRaider;
 use crate::configuration::diccionary::combo_permuter::ComboPermuter;
@@ -14,7 +14,7 @@ use crate::configuration::diccionary::combo_permuter::ComboPermuter;
 #[allow(dead_code)]
 pub struct WordCollectionMemory {
     headers: StringRecord,
-    map: HashMap<String, Word>,
+    map: BTreeMap<String, Word>,
     enable_scraper: bool,
     enable_rebuild: bool
 }
@@ -32,7 +32,7 @@ impl WordCollectionMemory {
         let enable_rebuild = args.get("ENABLE_REBUILD");
         return WordCollectionMemory {
             headers: StringRecord::new(),
-            map: HashMap::new(),
+            map:  BTreeMap::new(),
             enable_scraper: if enable_scraper.is_some() {enable_scraper.unwrap().trim().parse().unwrap()} else {false},
             enable_rebuild: if enable_rebuild.is_some() {enable_rebuild.unwrap().trim().parse().unwrap()} else {false}
         }
@@ -194,50 +194,43 @@ impl WordCollectionMemory {
         return code_vector;
     }
 
-    fn calculate_includes_condition(&self, code: &String, key: &String, word: &Word, lax: Option<bool>, position: Option<i8>) -> bool{      
+    fn find_includes_condition(&self, code: &String, lax: Option<bool>, position: Option<i8>) -> Vec<(&String, &Word)> {      
         let mut action = 0;
         if position.is_some() {
             action = position.unwrap();
         }
 
-        let mut lax_status = false;
-        if lax.is_some() && lax.unwrap() {
-            lax_status = self.calculate_includes_lax_condition(code, key, word, position);
-        }
-         
-        return lax_status || match action {
-            -1 => key.starts_with(code) ,
-             1 => key.ends_with(code)   ,
-             _ => key.contains(code)    ,
+        let mut word_range: Vec<(&String, &Word)> = match action {
+            -1 => self.map.range(code.clone()..).take_while(|(k, _)| k.starts_with(code)).collect() ,
+             1 => self.map.range(code.clone()..).take_while(|(k, _)| k.ends_with(code)).collect()   ,
+             _ => self.map.range(code.clone()..).take_while(|(k, _)| k.contains(code)).collect()    ,
         };
+
+        if lax.is_some() && lax.unwrap() {
+            let mut word_lax_range: Vec<(&String, &Word)> = self.find_includes_lax_condition(code, word_range.clone(), action);
+            word_range.append(&mut word_lax_range);
+        }
+
+        return word_range;
     }
 
-    fn calculate_includes_lax_condition(&self, code: &String, key: &String, word: &Word, position: Option<i8>) -> bool{
-        let code_as_unicode = unidecode(&code);
-        let mut action = 0;
-        if position.is_some() {
-            action = position.unwrap();
-        }
+    fn find_includes_lax_condition(&self, code: &String, word_range: Vec<(&String, &Word)>, action: i8) -> Vec<(&String, &Word)> {
+        let code_as_unicode = &unidecode(&code);
+        let word_lax_range: Vec<(&String, &Word)>  = match action {
+            -1 => self.map.range(code_as_unicode.clone()..).take_while(|(k, _)| 
+                !word_range.iter().any(|reference| reference.0.eq(k.as_str())) && 
+                 k.starts_with(code_as_unicode)).collect() ,
 
-        let mut reference_status = false;
-        for reference in word.references.clone() {
-            reference_status = match action {
-                -1 => reference.starts_with(code) || reference.starts_with(&code_as_unicode) ,
-                 1 => reference.ends_with(code)   || reference.ends_with(&code_as_unicode)   ,
-                 _ => reference.contains(code)    || reference.contains(&code_as_unicode)    ,
-            };
-            if reference_status {
-                break;
-            }
-        }
+             1 => self.map.range(code_as_unicode.clone()..).take_while(|(k, _)| 
+                !word_range.iter().any(|reference| reference.0.eq(k.as_str())) && 
+                 k.ends_with(code_as_unicode)).collect()   ,
 
-        let key_status = match action {
-            -1 => key.starts_with(&code_as_unicode) ,
-             1 => key.ends_with(&code_as_unicode)   ,
-             _ => key.contains(&code_as_unicode)    ,
+             _ => self.map.range(code_as_unicode.clone()..).take_while(|(k, _)| 
+                !word_range.iter().any(|reference| reference.0.eq(k.as_str())) && 
+                 k.contains(code_as_unicode)).collect()    ,
         };
 
-        return reference_status || key_status;
+        return word_lax_range;
     }
 
 }
@@ -263,20 +256,28 @@ impl WordCollection for WordCollectionMemory {
     }
 
     fn find_includes(&self, code: &String, position: Option<i8>, lax: Option<bool>, size: Option<i64>) -> Vec<&Word> {
+        let word_range: Vec<(&String, &Word)> = self.find_includes_condition(code, lax, position);
         let mut filter: Vec<&Word> = Vec::new();
-        for key in self.map.keys().clone() {
-            let word = self.find_visible(key);
-            if word.is_none() {
-                continue;
+
+        for range in word_range {
+            let mut words: Vec<&Word> = vec![];
+            if lax.is_none() || (lax.is_some() && !lax.unwrap()) {
+                let visible = self.find_visible(range.0);
+                if visible.is_some() {
+                    words = vec![visible.unwrap()]
+                }
+            } else {
+                words = self.find_lax(range.0);
             }
-            let in_filter = filter.iter().any(|&i| i.word.eq(&word.unwrap().word));
-            let coincidence = self.calculate_includes_condition(code, key, word.unwrap(), lax, position);
-            if !in_filter && coincidence {
-                filter.push(word.unwrap());
-            }
-            
-            if size.is_some() && (filter.len() as i64) >= size.unwrap() {
-                return filter;
+
+            for word in words {
+                if !filter.iter().any(|reference| reference.word.eq(&word.word)) {
+                    filter.push(word);
+                }
+
+                if size.is_some() && (filter.len() as i64) >= size.unwrap() {
+                    return filter;
+                }
             }
         }
         return filter;
