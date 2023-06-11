@@ -10,7 +10,7 @@ const SEPARATOR: &str = "#";
 //TODO: Rewrite.
 pub struct Word {
     pub word: String,
-    pub word_unicode: Option<String>,
+    pub references: Vec<String>,
     pub visible: bool,
     pub category: String,
     pub genre: String,
@@ -30,7 +30,7 @@ impl Word {
     pub fn empty() -> Word {
         return Word {
             word: String::new(),
-            word_unicode: Option::None,
+            references: Vec::new(),
             visible: false,
             category: String::new(),
             genre: String::new(),
@@ -48,8 +48,7 @@ impl Word {
 
     pub fn from_dto(dto: DTOWord) -> Word {
         let word = if dto.word.is_some() {dto.word.unwrap()} else {String::new()};
-        let word_unicode = dto.word_unicode;
-        let visible = false;
+        let visible = true;
         let category = if dto.category.is_some() {dto.category.unwrap()} else {String::new()};
         let genre = if dto.genre.is_some() {dto.genre.unwrap()} else {String::new()};
         let number = if dto.number.is_some() {dto.number.unwrap()} else {String::new()};
@@ -60,8 +59,15 @@ impl Word {
         let locale = if dto.locale.is_some() {dto.locale.unwrap()} else {String::new()};
         let origin = if dto.origin.is_some() {dto.origin.unwrap()} else {String::new()};
         let synonyms = if dto.synonyms.is_some() {dto.synonyms.unwrap()} else {String::new()};
+        
+        let mut references: Vec<String> = Vec::new();
+        if dto.references.is_some() {
+            for part in dto.references.unwrap().split("#") {
+                references.push(part.to_string());
+            }
+        }
+        
         let mut meaning: Vec<String> = Vec::new();
-
         if dto.meaning.is_some() {
             for part in dto.meaning.unwrap().split("#") {
                 meaning.push(part.to_string());
@@ -69,19 +75,15 @@ impl Word {
         }
 
         return Word {
-            word, word_unicode, visible, category, genre, number, root, affix, tonic, syllables, locale, origin, synonyms, meaning
+            word, references, visible, category, genre, number, root, affix, tonic, syllables, locale, origin, synonyms, meaning
         };
     }
 
     pub fn as_vector(&self) -> Vec<std::string::String> {
         let v = self.clone();
-        let mut unicode = String::new();
-        if v.word_unicode.is_some() {
-            unicode = v.word_unicode.unwrap();
-        }
         return vec![
             v.word,
-            unicode,
+            v.references.join(SEPARATOR),
             v.category,
             v.genre,
             v.number,
@@ -99,7 +101,7 @@ impl Word {
         let v = self.clone();
         return DTOWord{
             word: Option::Some(v.word),
-            word_unicode: v.word_unicode,
+            references: Option::Some(v.references.join(SEPARATOR)),
             category: Option::Some(v.category),
             genre: Option::Some(v.genre),
             number: Option::Some(v.number),

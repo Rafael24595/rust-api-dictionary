@@ -39,26 +39,47 @@ impl WordCollectionMemory {
     }
 
     fn insert(&mut self, mut word: Word) {
+        let key = word.word.to_lowercase();
+        let unicode = &unidecode(&word.word).to_lowercase();
+        let is_unicode = word.word.eq(unicode);
+        let exists = self.map.get(&key);
+
+        if exists.is_none() && !is_unicode {
+            word.references = vec![unicode.to_string()];
+        }
+
+        if exists.is_some() {
+            word.references = exists.unwrap().references.clone();
+        }
+
+        self.map.insert(key, word.clone());
+
+        if !is_unicode {
+            self.insert_unicode(word);
+        }
+    }
+
+    fn insert_unicode(&mut self, word: Word) {
         let unicode = &unidecode(&word.word);
-        if word.word_unicode.is_none() && !word.word.eq_ignore_ascii_case(&unicode) {
-            word.word_unicode = Some(unicode.to_string());
-        }
-        self.map.insert(word.word.to_lowercase(), word.clone());
         let word_unicode = self.map.get(unicode);
-        if word.word_unicode.is_none() && !word.word.eq_ignore_ascii_case(&unicode) {
-            let mut word_save = word.clone();
-            if word_unicode.is_some() {
-                if word_unicode.unwrap().visible {
-                    return;
-                }
-                word_save = word_unicode.unwrap().clone();
-            } else {
-                word_save.word = unicode.to_string();
-                word_save.visible = true;
+
+        let mut word_save: Word;
+        if word_unicode.is_some() {
+            word_save = word_unicode.unwrap().clone();
+            let mut unicode_mix = word_save.references.clone();
+            let conains_unicode = unicode_mix.iter().any(|reference| reference.eq(&word.word.clone()));
+            if !conains_unicode {
+                unicode_mix.push(word.word.clone());
             }
-            word_save.word_unicode = Option::Some(word.word);
-            self.map.insert(unicode.to_lowercase(), word_save);
+            word_save.references = unicode_mix;
+        } else {
+            word_save = word.clone();
+            word_save.word = unicode.to_string();
+            word_save.visible = false;
+            word_save.references = vec![word.word.clone()];
         }
+
+        self.map.insert(unicode.to_lowercase(), word_save);
     }
 
     fn find_random_positions(&self, keys: Vec<String>, size: Option<i64>) ->  Vec<usize>{
@@ -93,9 +114,16 @@ impl WordCollectionMemory {
                     return true;
                 }
             }
-
         }
         return false;
+    }
+
+    fn find_visible(&self, code: &String) -> Option<&Word> {
+        let word = self.map.get(code);
+        if word.is_some() && word.unwrap().visible {
+            return word;
+        }
+        return Option::None;
     }
 
     fn find_permute_includes(&mut self, code: String, lax: Option<bool>, size: &mut Option<i64>, includes: Option<i8>) -> Vec<Word> {
@@ -143,12 +171,50 @@ impl WordCollectionMemory {
         return code_vector;
     }
 
-    fn find_visible(&self, code: &String) -> Option<&Word> {
-        let word = self.map.get(code);
-        if word.is_some() && !word.unwrap().visible {
-            return word;
+    fn calculate_includes_condition(&self, code: &String, key: &String, word: &Word, lax: Option<bool>, position: Option<i8>) -> bool{      
+        let mut action = 0;
+        if position.is_some() {
+            action = position.unwrap();
         }
-        return Option::None;
+
+        let mut lax_status = false;
+        if lax.is_some() && lax.unwrap() {
+            lax_status = self.calculate_includes_lax_condition(code, key, word, position);
+        }
+         
+        return lax_status || match action {
+            -1 => key.starts_with(code) ,
+             1 => key.ends_with(code)   ,
+             _ => key.contains(code)    ,
+        };
+    }
+
+    fn calculate_includes_lax_condition(&self, code: &String, key: &String, word: &Word, position: Option<i8>) -> bool{
+        let code_as_unicode = unidecode(&code);
+        let mut action = 0;
+        if position.is_some() {
+            action = position.unwrap();
+        }
+
+        let mut reference_status = false;
+        for reference in word.references.clone() {
+            reference_status = match action {
+                -1 => reference.starts_with(code) || reference.starts_with(&code_as_unicode) ,
+                 1 => reference.ends_with(code)   || reference.ends_with(&code_as_unicode)   ,
+                 _ => reference.contains(code)    || reference.contains(&code_as_unicode)    ,
+            };
+            if reference_status {
+                break;
+            }
+        }
+
+        let key_status = match action {
+            -1 => key.starts_with(&code_as_unicode) ,
+             1 => key.ends_with(&code_as_unicode)   ,
+             _ => key.contains(&code_as_unicode)    ,
+        };
+
+        return reference_status || key_status;
     }
 
 }
@@ -162,15 +228,14 @@ impl WordCollection for WordCollectionMemory {
 
     fn find_lax(&self, code: &String) -> Vec<&Word> {
         let mut filter: Vec<&Word> = Vec::new();
-        let word = self.map.get(code);
+        let word = self.map.get(&unidecode(code));
         if word.is_some() {
-            if !word.unwrap().visible {
+            if word.unwrap().visible {
                 filter.push(&word.unwrap());
             }
-            if word.unwrap().word_unicode.is_some() {
-                let unicode = word.unwrap().word_unicode.as_ref().unwrap();
-                let word_unicode = self.map.get(&unicode.to_lowercase());
-                if word_unicode.is_some() && !word_unicode.unwrap().visible  {
+            for reference in word.unwrap().references.clone() {
+                let word_unicode = self.map.get(&reference.to_lowercase());
+                if word_unicode.is_some() && word_unicode.unwrap().visible  {
                     filter.push(&word_unicode.unwrap());
                 }
             }
@@ -178,30 +243,19 @@ impl WordCollection for WordCollectionMemory {
         return filter;
     }
 
-    //TODO: Refactoring.
     fn find_includes(&self, code: &String, position: Option<i8>, lax: Option<bool>, size: Option<i64>) -> Vec<&Word> {
-        let keys = self.map.keys();
         let mut filter: Vec<&Word> = Vec::new();
-        let is_lax = lax.is_some() && lax.unwrap();
-        let mut code_unicode = code.to_string();
-        if is_lax {
-            code_unicode = unidecode(&code);
-        }
-        for key in keys.clone() {
+        for key in self.map.keys().clone() {
             let word = self.find_visible(key);
-            let in_filter = word.is_some() && filter.iter().any(|&i| i.word.eq(&word.unwrap().word));
-            if word.is_some() && !in_filter {
-                let mut unicode = String::new();
-                if is_lax && word.unwrap().word_unicode.is_some() {
-                    unicode = word.unwrap().word_unicode.as_ref().unwrap().to_lowercase();
-                }
-                let coincidence = word.is_some() &&
-                    if position.is_some() && position.unwrap() == -1 {key.starts_with(code) || (is_lax && (key.starts_with(&code_unicode) || (word.unwrap().word_unicode.is_some() && (unicode.starts_with(code) || unicode.starts_with(&code_unicode))))) } 
-                    else if position.is_some() && position.unwrap() == 1 {key.ends_with(code) || (is_lax && (key.ends_with(&code_unicode) || (word.unwrap().word_unicode.is_some() && (unicode.ends_with(code) || unicode.ends_with(&code_unicode))))) } 
-                    else {key.contains(code) || (is_lax && (key.contains(&code_unicode) || (word.unwrap().word_unicode.is_some() && (unicode.contains(code) || unicode.contains(&code_unicode))))) };
+            if word.is_none() {
+                continue;
+            }
+            let in_filter = filter.iter().any(|&i| i.word.eq(&word.unwrap().word));
+            if !in_filter {
+                let coincidence = self.calculate_includes_condition(code, key, word.unwrap(), lax, position);
                 if coincidence {
                     filter.push(word.unwrap());
-                    if filter.len() == keys.len() || (size.is_some() && (filter.len() as i64) >= size.unwrap()) {
+                    if size.is_some() && (filter.len() as i64) >= size.unwrap() {
                         return filter;
                     }
                 }
@@ -222,7 +276,6 @@ impl WordCollection for WordCollectionMemory {
                 word_vector.push(word.unwrap());
             }
         }
-
         return word_vector;
     }
 
@@ -251,7 +304,6 @@ impl WordCollection for WordCollectionMemory {
                 return word_vector;
             }         
         }
-
         return word_vector; 
     }
 
@@ -263,12 +315,11 @@ impl Dependency for WordCollectionMemory {
         if self.enable_rebuild {
             let mut writer = csv::Writer::from_path(SOURCE_PATH_UPDATED)?;
     
-            //let _ = writer.write_record(&self.headers);
-
+            let _ = writer.write_record(&self.headers);
             let mut collection: Vec<&Word> = self.map.values().collect();
             collection.sort_by(|a, b| a.word.to_lowercase().cmp(&b.word.to_lowercase()));
             for word in collection {
-                if !word.visible {
+                if word.visible {
                     let _  = writer.write_record(word.as_vector());
                 }
             }

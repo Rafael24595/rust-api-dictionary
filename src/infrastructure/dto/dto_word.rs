@@ -6,7 +6,7 @@ use serde::Serialize;
 //TODO: Rewrite.
 pub struct DTOWord {
     pub word: Option<String>,
-    pub word_unicode: Option<String>,
+    pub references: Option<String>,
     pub category: Option<String>,
     pub genre: Option<String>,
     pub number: Option<String>,
