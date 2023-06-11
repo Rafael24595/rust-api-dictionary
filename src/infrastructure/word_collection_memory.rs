@@ -19,6 +19,7 @@ pub struct WordCollectionMemory {
     enable_rebuild: bool
 }
 
+//TODO: Configuration.
 const SOURCE_PATH: &str = "./assets/dictionary_es.csv";
 const SOURCE_PATH_UPDATED: &str = "./assets/dictionary_updated_es.csv";
 

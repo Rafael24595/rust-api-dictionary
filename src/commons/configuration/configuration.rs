@@ -3,6 +3,7 @@
 #[path = "../../infrastructure/dto/dto_anonymous_collection.rs"] pub(crate) mod dto_anonymous_collection;
 #[path = "../../infrastructure/dto/dto_collection.rs"] pub(crate) mod dto_collection;
 #[path = "../../infrastructure/dto/dto_word.rs"] pub(crate) mod dto_word;
+#[path = "../../infrastructure/dto/dto_word_lite.rs"] pub(crate) mod dto_word_lite;
 #[path = "../../domain/word.rs"] pub(crate) mod word;
 #[path = "diccionary.rs"] pub(crate) mod diccionary;
 

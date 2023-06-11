@@ -2,6 +2,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::configuration::dto_word::DTOWord;
+use crate::configuration::dto_word_lite::DTOWordLite;
 
 const SEPARATOR: &str = "#";
 
@@ -102,6 +103,24 @@ impl Word {
         return DTOWord{
             word: Option::Some(v.word),
             references: Option::Some(v.references.join(SEPARATOR)),
+            category: Option::Some(v.category),
+            genre: Option::Some(v.genre),
+            number: Option::Some(v.number),
+            root: Option::Some(v.root),
+            affix: Option::Some(v.affix),
+            tonic: Option::Some(v.tonic),
+            syllables: Option::Some(v.syllables),
+            locale: Option::Some(v.locale),
+            origin: Option::Some(v.origin),
+            synonyms: Option::Some(v.synonyms),
+            meaning: Option::Some(v.meaning.join(SEPARATOR))
+        }
+    }
+
+    pub fn as_dto_lite(&self) -> DTOWordLite {
+        let v = self.clone();
+        return DTOWordLite{
+            word: Option::Some(v.word),
             category: Option::Some(v.category),
             genre: Option::Some(v.genre),
             number: Option::Some(v.number),
