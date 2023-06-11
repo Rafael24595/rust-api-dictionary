@@ -10,7 +10,8 @@ const SEPARATOR: &str = "#";
 //TODO: Rewrite.
 pub struct Word {
     pub word: String,
-    pub unicode: String,
+    pub word_unicode: Option<String>,
+    pub visible: bool,
     pub category: String,
     pub genre: String,
     pub number: String,
@@ -29,7 +30,8 @@ impl Word {
     pub fn empty() -> Word {
         return Word {
             word: String::new(),
-            unicode: String::new(),
+            word_unicode: Option::None,
+            visible: false,
             category: String::new(),
             genre: String::new(),
             number: String::new(),
@@ -46,7 +48,8 @@ impl Word {
 
     pub fn from_dto(dto: DTOWord) -> Word {
         let word = if dto.word.is_some() {dto.word.unwrap()} else {String::new()};
-        let unicode = if dto.unicode.is_some() {dto.unicode.unwrap()} else {String::new()};
+        let word_unicode = dto.word_unicode;
+        let visible = false;
         let category = if dto.category.is_some() {dto.category.unwrap()} else {String::new()};
         let genre = if dto.genre.is_some() {dto.genre.unwrap()} else {String::new()};
         let number = if dto.number.is_some() {dto.number.unwrap()} else {String::new()};
@@ -66,15 +69,19 @@ impl Word {
         }
 
         return Word {
-            word, unicode, category, genre, number, root, affix, tonic, syllables, locale, origin, synonyms, meaning
+            word, word_unicode, visible, category, genre, number, root, affix, tonic, syllables, locale, origin, synonyms, meaning
         };
     }
 
     pub fn as_vector(&self) -> Vec<std::string::String> {
         let v = self.clone();
+        let mut unicode = String::new();
+        if v.word_unicode.is_some() {
+            unicode = v.word_unicode.unwrap();
+        }
         return vec![
             v.word,
-            v.unicode,
+            unicode,
             v.category,
             v.genre,
             v.number,
@@ -92,7 +99,7 @@ impl Word {
         let v = self.clone();
         return DTOWord{
             word: Option::Some(v.word),
-            unicode: Option::Some(v.unicode),
+            word_unicode: v.word_unicode,
             category: Option::Some(v.category),
             genre: Option::Some(v.genre),
             number: Option::Some(v.number),

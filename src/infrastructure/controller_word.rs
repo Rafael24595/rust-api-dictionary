@@ -10,10 +10,10 @@ use rocket::http::Status;
 
 pub fn define(build: Rocket<Build>) -> Rocket<Build> {
     build.mount("/word", routes![word])
-         .mount("/word", routes![word_lax])
-         .mount("/word", routes![word_includes])
-         .mount("/word", routes![word_random])
-         .mount("/word", routes![word_permute])
+         .mount("/collection", routes![word_lax])
+         .mount("/collection", routes![word_includes])
+         .mount("/collection", routes![word_random])
+         .mount("/collection", routes![word_permute])
 }
 
 #[get("/random?<size>")]

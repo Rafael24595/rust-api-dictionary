@@ -38,9 +38,27 @@ impl WordCollectionMemory {
         }
     }
 
-    fn insert(&mut self, word: Word) {
-        let key = word.word.clone().to_lowercase();
-        self.map.insert(key, word);
+    fn insert(&mut self, mut word: Word) {
+        let unicode = &unidecode(&word.word);
+        if word.word_unicode.is_none() && !word.word.eq_ignore_ascii_case(&unicode) {
+            word.word_unicode = Some(unicode.to_string());
+        }
+        self.map.insert(word.word.to_lowercase(), word.clone());
+        let word_unicode = self.map.get(unicode);
+        if word.word_unicode.is_none() && !word.word.eq_ignore_ascii_case(&unicode) {
+            let mut word_save = word.clone();
+            if word_unicode.is_some() {
+                if word_unicode.unwrap().visible {
+                    return;
+                }
+                word_save = word_unicode.unwrap().clone();
+            } else {
+                word_save.word = unicode.to_string();
+                word_save.visible = true;
+            }
+            word_save.word_unicode = Option::Some(word.word);
+            self.map.insert(unicode.to_lowercase(), word_save);
+        }
     }
 
     fn find_random_positions(&self, keys: Vec<String>, size: Option<i64>) ->  Vec<usize>{
@@ -99,18 +117,17 @@ impl WordCollectionMemory {
                 let _ = size.insert(size.unwrap() - words.len() as i64);
             }
             return words.iter().cloned().cloned().collect();
-        } else {
-            let mut code_vector: Vec<Word> = vec![];
-            let word = self.map.get(&code);
-            if word.is_some() {
-                code_vector.push(word.unwrap().clone());
-                if size.is_some() {
-                    let _ = size.insert(size.unwrap() - 1);
-                }
-            }
-            return code_vector;
-        }
+        } 
         
+        let mut code_vector: Vec<Word> = vec![];
+        let word = self.find_visible(&code);
+        if word.is_some() {
+            code_vector.push(word.unwrap().clone());
+            if size.is_some() {
+                let _ = size.insert(size.unwrap() - 1);
+            }
+        }
+        return code_vector;
     }
 
     fn find_permute_unrecognized(&mut self, code: String, size: &mut Option<i64>) -> Vec<Word> {
@@ -126,7 +143,13 @@ impl WordCollectionMemory {
         return code_vector;
     }
 
-    
+    fn find_visible(&self, code: &String) -> Option<&Word> {
+        let word = self.map.get(code);
+        if word.is_some() && !word.unwrap().visible {
+            return word;
+        }
+        return Option::None;
+    }
 
 }
 
@@ -134,35 +157,48 @@ impl WordCollection for WordCollectionMemory {
 
     fn find(&mut self, code: &String) -> Option<&Word> {
         print!("{}", self.scraper(code));
-        return self.map.get(code);
+        return self.find_visible(code);
     }
 
     fn find_lax(&self, code: &String) -> Vec<&Word> {
         let mut filter: Vec<&Word> = Vec::new();
-        let word_strict = self.map.get(code);
-        if word_strict.is_some() {
-            filter.push(&word_strict.unwrap());
-        }
-        for word_lax in self.map.values() {
-            let in_filter = filter.iter().any(|&i| i.word.eq(&word_lax.word));
-            if word_lax.unicode.to_lowercase().eq(code) && !in_filter {
-                filter.push(word_lax);
+        let word = self.map.get(code);
+        if word.is_some() {
+            if !word.unwrap().visible {
+                filter.push(&word.unwrap());
+            }
+            if word.unwrap().word_unicode.is_some() {
+                let unicode = word.unwrap().word_unicode.as_ref().unwrap();
+                let word_unicode = self.map.get(&unicode.to_lowercase());
+                if word_unicode.is_some() && !word_unicode.unwrap().visible  {
+                    filter.push(&word_unicode.unwrap());
+                }
             }
         }
         return filter;
     }
 
+    //TODO: Refactoring.
     fn find_includes(&self, code: &String, position: Option<i8>, lax: Option<bool>, size: Option<i64>) -> Vec<&Word> {
         let keys = self.map.keys();
         let mut filter: Vec<&Word> = Vec::new();
+        let is_lax = lax.is_some() && lax.unwrap();
+        let mut code_unicode = code.to_string();
+        if is_lax {
+            code_unicode = unidecode(&code);
+        }
         for key in keys.clone() {
-            let word = self.map.get(key);
-            let in_filter = filter.iter().any(|&i| i.word.eq(&word.unwrap().word));
-            if !in_filter {
+            let word = self.find_visible(key);
+            let in_filter = word.is_some() && filter.iter().any(|&i| i.word.eq(&word.unwrap().word));
+            if word.is_some() && !in_filter {
+                let mut unicode = String::new();
+                if is_lax && word.unwrap().word_unicode.is_some() {
+                    unicode = word.unwrap().word_unicode.as_ref().unwrap().to_lowercase();
+                }
                 let coincidence = word.is_some() &&
-                    if position.is_some() && position.unwrap() == -1 {key.starts_with(code) || (lax.is_some() && lax.unwrap() && word.unwrap().unicode.to_lowercase().starts_with(code)) } 
-                    else if position.is_some() && position.unwrap() == 1 {key.ends_with(code) || (lax.is_some() && lax.unwrap() && word.unwrap().unicode.to_lowercase().ends_with(code)) } 
-                    else {key.contains(code) || (lax.is_some() && lax.unwrap() && word.unwrap().unicode.to_lowercase().contains(code)) };
+                    if position.is_some() && position.unwrap() == -1 {key.starts_with(code) || (is_lax && (key.starts_with(&code_unicode) || (word.unwrap().word_unicode.is_some() && (unicode.starts_with(code) || unicode.starts_with(&code_unicode))))) } 
+                    else if position.is_some() && position.unwrap() == 1 {key.ends_with(code) || (is_lax && (key.ends_with(&code_unicode) || (word.unwrap().word_unicode.is_some() && (unicode.ends_with(code) || unicode.ends_with(&code_unicode))))) } 
+                    else {key.contains(code) || (is_lax && (key.contains(&code_unicode) || (word.unwrap().word_unicode.is_some() && (unicode.contains(code) || unicode.contains(&code_unicode))))) };
                 if coincidence {
                     filter.push(word.unwrap());
                     if filter.len() == keys.len() || (size.is_some() && (filter.len() as i64) >= size.unwrap()) {
@@ -181,7 +217,7 @@ impl WordCollection for WordCollectionMemory {
         let mut word_vector: Vec<&Word> = vec![];
         for position in position_vector.iter_mut() {
             let key = keys.get(position.clone()).unwrap();
-            let word = self.map.get(key);
+            let word = self.find_visible(key);
             if word.is_some() {
                 word_vector.push(word.unwrap());
             }
@@ -227,12 +263,14 @@ impl Dependency for WordCollectionMemory {
         if self.enable_rebuild {
             let mut writer = csv::Writer::from_path(SOURCE_PATH_UPDATED)?;
     
-            let _ = writer.write_record(&self.headers);
+            //let _ = writer.write_record(&self.headers);
 
             let mut collection: Vec<&Word> = self.map.values().collect();
             collection.sort_by(|a, b| a.word.to_lowercase().cmp(&b.word.to_lowercase()));
-            for value in collection {
-                let _  = writer.write_record(value.as_vector());
+            for word in collection {
+                if !word.visible {
+                    let _  = writer.write_record(word.as_vector());
+                }
             }
     
             writer.flush()?;
@@ -245,11 +283,8 @@ impl Dependency for WordCollectionMemory {
         self.headers = reader.headers()?.clone();
 
         for result in reader.deserialize() {
-            let mut dto: DTOWord = result?;
+            let dto: DTOWord = result?;
             if dto.word.is_some() {
-                if dto.unicode.is_none() {
-                    dto.unicode = Some(unidecode(&dto.word.clone().unwrap()));
-                }
                 let word = Word::from_dto(dto);
                 self.insert(word);
             }
