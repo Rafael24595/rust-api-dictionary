@@ -63,23 +63,35 @@ impl WordCollectionMemory {
         let unicode = &unidecode(&word.word);
         let word_unicode = self.map.get(unicode);
 
-        let mut word_save: Word;
-        if word_unicode.is_some() {
-            word_save = word_unicode.unwrap().clone();
-            let mut unicode_mix = word_save.references.clone();
-            let conains_unicode = unicode_mix.iter().any(|reference| reference.eq(&word.word.clone()));
-            if !conains_unicode {
-                unicode_mix.push(word.word.clone());
-            }
-            word_save.references = unicode_mix;
+        let word_save: Word;
+        if word_unicode.is_none() {
+            word_save = self.create_unicode(word, unicode);
         } else {
-            word_save = word.clone();
-            word_save.word = unicode.to_string();
-            word_save.visible = false;
-            word_save.references = vec![word.word.clone()];
+            word_save = self.modify_unicode(word, word_unicode.unwrap());
         }
 
         self.map.insert(unicode.to_lowercase(), word_save);
+    }
+
+    fn modify_unicode(&self, word: Word, word_unicode: &Word) -> Word {
+        let mut word_save = word_unicode.clone();
+        let mut unicode_mix = word_save.references.clone();
+        let conains_unicode = unicode_mix.iter().any(|reference| reference.eq(&word.word.clone()));
+        if !conains_unicode {
+            unicode_mix.push(word.word.clone());
+        }
+        word_save.references = unicode_mix;
+
+        return word_save;
+    }
+
+    fn create_unicode(&self, word: Word, unicode: &String) -> Word {
+        let mut word_save = word.clone();
+        word_save.word = unicode.to_string();
+        word_save.visible = false;
+        word_save.references = vec![word.word.clone()];
+
+        return word_save;
     }
 
     fn find_random_positions(&self, keys: Vec<String>, size: Option<i64>) ->  Vec<usize>{
@@ -124,6 +136,17 @@ impl WordCollectionMemory {
             return word;
         }
         return Option::None;
+    }
+
+    fn find_references(&self, word: &Word) -> Vec<&Word> {
+        let mut filter: Vec<&Word> = Vec::new();
+        for reference in word.references.clone() {
+            let word_unicode = self.map.get(&reference.to_lowercase());
+            if word_unicode.is_some() && word_unicode.unwrap().visible  {
+                filter.push(&word_unicode.unwrap());
+            }
+        }
+        return filter;
     }
 
     fn find_permute_includes(&mut self, code: String, lax: Option<bool>, size: &mut Option<i64>, includes: Option<i8>) -> Vec<Word> {
@@ -233,12 +256,8 @@ impl WordCollection for WordCollectionMemory {
             if word.unwrap().visible {
                 filter.push(&word.unwrap());
             }
-            for reference in word.unwrap().references.clone() {
-                let word_unicode = self.map.get(&reference.to_lowercase());
-                if word_unicode.is_some() && word_unicode.unwrap().visible  {
-                    filter.push(&word_unicode.unwrap());
-                }
-            }
+            let mut references = self.find_references(&word.unwrap());
+            filter.append(&mut references);
         }
         return filter;
     }
@@ -251,14 +270,13 @@ impl WordCollection for WordCollectionMemory {
                 continue;
             }
             let in_filter = filter.iter().any(|&i| i.word.eq(&word.unwrap().word));
-            if !in_filter {
-                let coincidence = self.calculate_includes_condition(code, key, word.unwrap(), lax, position);
-                if coincidence {
-                    filter.push(word.unwrap());
-                    if size.is_some() && (filter.len() as i64) >= size.unwrap() {
-                        return filter;
-                    }
-                }
+            let coincidence = self.calculate_includes_condition(code, key, word.unwrap(), lax, position);
+            if !in_filter && coincidence {
+                filter.push(word.unwrap());
+            }
+            
+            if size.is_some() && (filter.len() as i64) >= size.unwrap() {
+                return filter;
             }
         }
         return filter;
@@ -285,11 +303,12 @@ impl WordCollection for WordCollectionMemory {
         let size_copy = &mut size.clone();
         for code in permute.permute() {
             let mut code_vector: Vec<Word> = vec![];
-            if includes.is_some() {
-                let mut result = self.find_permute_includes(code.clone(), lax, size_copy, includes);
+            
+            if includes.is_none() {
+                let mut result = self.find_permute_basic(code.clone(), lax, size_copy);
                 code_vector.append(&mut result);
             } else {
-                let mut result = self.find_permute_basic(code.clone(), lax, size_copy);
+                let mut result = self.find_permute_includes(code.clone(), lax, size_copy, includes);
                 code_vector.append(&mut result);
             }
 
