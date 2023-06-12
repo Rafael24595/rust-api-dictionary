@@ -6,7 +6,7 @@ use unidecode::unidecode;
 
 use crate::configuration::word_collection::WordCollection;
 use crate::configuration::dependency::Dependency;
-use crate::configuration::word::{Word};
+use crate::configuration::word::Word;
 use crate::configuration::dto_word::DTOWord;
 use crate::configuration::diccionary::rae_raider::RaeRaider;
 use crate::configuration::diccionary::combo_permuter::ComboPermuter;

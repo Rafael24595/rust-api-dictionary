@@ -1,4 +1,7 @@
 #[path = "../../commons/dependency.rs"] pub(crate) mod dependency;
+#[path = "../../commons/log/log_service.rs"] pub(crate) mod log_service;
+#[path = "../../commons/log/logger.rs"] pub(crate) mod logger;
+#[path = "../../domain/event_log.rs"] pub(crate) mod event_log;
 #[path = "../../domain/word_collection.rs"] pub(crate) mod word_collection;
 #[path = "../../infrastructure/dto/dto_anonymous_collection.rs"] pub(crate) mod dto_anonymous_collection;
 #[path = "../../infrastructure/dto/dto_collection.rs"] pub(crate) mod dto_collection;
@@ -68,6 +71,9 @@ fn build_configuration(args: HashMap<String, String>) -> Configuration {
     if max_permute_string.is_some() {
         max_permute = max_permute_string.unwrap().clone().parse::<i64>().unwrap()
     }
+
+    let logger = diccionary::get_logger(args.clone());
+    log_service::load(logger);
 
     let mut collection = diccionary::get_collection(args.clone());
     if let Err(e) = collection.on_init() {

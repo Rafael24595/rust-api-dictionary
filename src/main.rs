@@ -5,6 +5,8 @@
 
 use dotenv::dotenv;
 
+use crate::configuration::log_service;
+
 #[rocket::main]
 async fn main() {
     dotenv().ok();
@@ -15,7 +17,10 @@ async fn main() {
 }
 
 fn on_init() {
-    configuration::load();
+    let configuration = configuration::load();
+    let log_service = log_service::get_instance();
+
+    log_service.log("INFO", "SYSTEM", &("Session id established: ".to_string() + &configuration.session_id));
 }
 
 async fn serve() {
