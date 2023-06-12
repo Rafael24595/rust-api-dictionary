@@ -37,7 +37,7 @@ fn word_random(size: Option<i64>) -> Result<String, Custom<String>>{
 fn word_permute(combo: &str, min: Option<i8>, exists: Option<bool>, lax: Option<bool>, includes: Option<i8>, size: Option<i64>,) -> Result<String, Custom<String>>{
     let configuration = configuration::get_instance();
     if includes.is_some() && (size.is_none() || size.is_some() && size.unwrap() > configuration.max_permute) {
-        return Result::Err(Custom(Status::NotAcceptable, "Cannot process the request, max size for random filter is ".to_string() + &configuration.max_permute.to_string() + " elements."));
+        return Result::Err(Custom(Status::NotAcceptable, "Cannot process the request, max size for permute filter is ".to_string() + &configuration.max_permute.to_string() + " elements."));
     }
     let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let words = configuration::get_instance().word_collection.find_permute(&combo.to_string(), min, exists, lax, includes, size);
