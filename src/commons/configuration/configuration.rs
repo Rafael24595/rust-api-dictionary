@@ -23,7 +23,9 @@ pub struct Configuration {
     pub session_id: String,
     pub address: String,
     pub port: u16,
-    pub word_collection: Box<dyn WordCollection>
+    pub word_collection: Box<dyn WordCollection>,
+    pub max_random: i64,
+    pub max_permute: i64
 }
 
 lazy_static! {
@@ -56,6 +58,17 @@ fn build_configuration(args: HashMap<String, String>) -> Configuration {
     let address = args.get("ROCKET_ADDRESS").unwrap().clone();
     let port = args.get("ROCKET_PORT").unwrap().clone().parse::<u16>().unwrap();
 
+    let max_random_string = args.get("MAX_RANDOM");
+    let mut max_random = 100;
+    if max_random_string.is_some() {
+        max_random = max_random_string.unwrap().clone().parse::<i64>().unwrap()
+    }
+    let max_permute_string = args.get("MAX_PERMUTE");
+    let mut max_permute = 100000;
+    if max_permute_string.is_some() {
+        max_permute = max_permute_string.unwrap().clone().parse::<i64>().unwrap()
+    }
+
     let mut collection = diccionary::get_collection(args.clone());
     if let Err(e) = collection.on_init() {
         eprintln!("{}", e);
@@ -67,7 +80,9 @@ fn build_configuration(args: HashMap<String, String>) -> Configuration {
         session_id,
         address,
         port,
-        word_collection
+        word_collection,
+        max_random,
+        max_permute
     };
 }
 

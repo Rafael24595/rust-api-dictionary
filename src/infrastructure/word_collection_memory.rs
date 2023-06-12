@@ -16,12 +16,10 @@ pub struct WordCollectionMemory {
     headers: StringRecord,
     map: BTreeMap<String, Word>,
     enable_scraper: bool,
-    enable_rebuild: bool
+    enable_rebuild: bool,
+    source_file: String,
+    rebuild_file: String
 }
-
-//TODO: Configuration.
-const SOURCE_PATH: &str = "./assets/dictionary_es.csv";
-const SOURCE_PATH_UPDATED: &str = "./assets/dictionary_updated_es.csv";
 
 unsafe impl Send for WordCollectionMemory{}
 unsafe impl Sync for WordCollectionMemory{}
@@ -29,13 +27,26 @@ unsafe impl Sync for WordCollectionMemory{}
 impl WordCollectionMemory {
 
     pub fn new(args: HashMap<String, String>) -> impl WordCollection {
-        let enable_scraper = args.get("ENABLE_SCRAPER");
-        let enable_rebuild = args.get("ENABLE_REBUILD");
+        let enable_scraper_string = args.get("ENABLE_SCRAPER");
+        let enable_rebuild_string = args.get("ENABLE_REBUILD");
+        let enable_scraper = if enable_scraper_string.is_some() {enable_scraper_string.unwrap().trim().parse().unwrap()} else {false};
+        let enable_rebuild = if enable_rebuild_string.is_some() {enable_rebuild_string.unwrap().trim().parse().unwrap()} else {false};
+
+        let source_file = args.get("SOURCE_FILE");
+        if source_file.is_none() {
+            panic!("Cannot initalize WordColection dependency: Source not defined.");
+        }
+        let rebuild_file = args.get("REBUILD_FILE");
+        if rebuild_file.is_none() && enable_rebuild {
+            panic!("Cannot initalize WordColection dependency: Rebuild file not defined.");
+        }
         return WordCollectionMemory {
             headers: StringRecord::new(),
             map:  BTreeMap::new(),
-            enable_scraper: if enable_scraper.is_some() {enable_scraper.unwrap().trim().parse().unwrap()} else {false},
-            enable_rebuild: if enable_rebuild.is_some() {enable_rebuild.unwrap().trim().parse().unwrap()} else {false}
+            enable_scraper: enable_scraper,
+            enable_rebuild: enable_rebuild,
+            source_file: source_file.unwrap().to_string(),
+            rebuild_file: rebuild_file.unwrap().to_string()
         }
     }
 
@@ -93,24 +104,6 @@ impl WordCollectionMemory {
         word_save.references = vec![word.word.clone()];
 
         return word_save;
-    }
-
-    fn find_random_positions(&self, keys: Vec<String>, size: Option<i64>) ->  Vec<usize>{
-        let mut finish = false;
-        let map_len = self.map.len();
-        let mut position_vector: Vec<usize> = vec![];
-        while !finish {
-            let mut rng = rand::thread_rng();
-            let position = rng.gen_range(0..keys.len());
-            if !position_vector.contains(&position){
-                position_vector.push(position)
-            }
-            if size.is_none() || map_len == position_vector.len() || (position_vector.len() as i64) == size.unwrap() {
-                finish = true;
-            }
-        }
-    
-        return position_vector;
     }
 
     fn scraper(&mut self, code: &String) -> bool{
@@ -286,14 +279,20 @@ impl WordCollection for WordCollectionMemory {
 
     fn find_random(&self, size: Option<i64>) ->  Vec<&Word> {
         let keys = self.map.keys().cloned().collect::<Vec<String>>();
-        let mut position_vector: Vec<usize> = self.find_random_positions(keys.clone(), size);
-
+        let mut finish = false;
+        let map_len = self.map.len();
         let mut word_vector: Vec<&Word> = vec![];
-        for position in position_vector.iter_mut() {
+        while !finish {
+            let mut rng = rand::thread_rng();
+            let position = rng.gen_range(0..keys.len());
+            
             let key = keys.get(position.clone()).unwrap();
             let word = self.find_visible(key);
-            if word.is_some() {
-                word_vector.push(word.unwrap());
+            if word.is_some() && !word_vector.iter().any(|e| e.word.eq(&word.unwrap().word)) {
+                word_vector.push(word.unwrap())
+            }
+            if size.is_none() || map_len == word_vector.len() || (word_vector.len() as i64) == size.unwrap() {
+                finish = true;
             }
         }
         return word_vector;
@@ -334,7 +333,7 @@ impl Dependency for WordCollectionMemory {
 
     fn on_exit(&mut self) -> Result<(), Box<dyn Error>> {
         if self.enable_rebuild {
-            let mut writer = csv::Writer::from_path(SOURCE_PATH_UPDATED)?;
+            let mut writer = csv::Writer::from_path(self.rebuild_file.clone())?;
     
             let _ = writer.write_record(&self.headers);
             let mut collection: Vec<&Word> = self.map.values().collect();
@@ -351,7 +350,7 @@ impl Dependency for WordCollectionMemory {
     }
 
     fn on_init(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut reader = csv::Reader::from_path(SOURCE_PATH)?;
+        let mut reader = csv::Reader::from_path(self.source_file.clone())?;
         self.headers = reader.headers()?.clone();
 
         for result in reader.deserialize() {
