@@ -282,7 +282,7 @@ impl WordCollection for WordCollectionMemory {
         let mut finish = false;
         let map_len = self.map.len();
         let mut word_vector: Vec<&Word> = vec![];
-        while !finish {
+        while size.is_some() && size.unwrap() > 0 && !finish {
             let mut rng = rand::thread_rng();
             let position = rng.gen_range(0..keys.len());
             
