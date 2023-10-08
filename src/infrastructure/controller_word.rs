@@ -1,7 +1,10 @@
+
+
 use super::configuration;
 use crate::configuration::dto_anonymous_collection::DTOAnonymousCollection;
 use crate::configuration::dto_collection::DTOCollection;
 use crate::configuration::dto_word_lite::DTOWordLite;
+use crate::configuration::utils;
 
 use std::time::SystemTime;
 use rocket::Rocket;
@@ -14,6 +17,7 @@ pub fn define(build: Rocket<Build>) -> Rocket<Build> {
          .mount("/collection", routes![word_lax])
          .mount("/collection", routes![word_includes])
          .mount("/collection", routes![word_random])
+         .mount("/collection", routes![word_permute_without_combo])
          .mount("/collection", routes![word_permute])
 }
 
@@ -28,13 +32,47 @@ fn word_random(size: Option<i64>) -> Result<String, Custom<String>>{
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
     let dtos: Vec<DTOWordLite> = words.iter().map(|word| word.as_dto_lite()).collect();
-    let collection = DTOAnonymousCollection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: dtos};
+    let collection = DTOAnonymousCollection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), query: size.unwrap().to_string(), result: dtos};
+    
+    return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
+}
+
+#[get("/permute?<combolen>&<combomin>&<min>&<exists>&<lax>&<includes>&<size>")]
+fn word_permute_without_combo(combolen: Option<i8>, combomin: Option<i8>, min: Option<i8>, exists: Option<bool>, lax: Option<bool>, includes: Option<i8>, size: Option<i64>) -> Result<String, Custom<String>>{
+    let configuration = configuration::get_instance();
+    if includes.is_some() && (size.is_none() || size.is_some() && size.unwrap() > configuration.max_permute) {
+        return Result::Err(Custom(Status::NotAcceptable, "Cannot process the request, max size for permute filter is ".to_string() + &configuration.max_permute.to_string() + " elements."));
+    }
+
+    let mut combo_len = 4;
+    if combolen.is_some() && combolen.unwrap() > 0 {
+        combo_len = combolen.unwrap();
+    }
+
+    let mut combo_min = 4;
+    if combomin.is_some() && combomin.unwrap() > 0 {
+        combo_min = combomin.unwrap();
+    }
+
+    let start = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+
+    let mut words = vec![];
+    let mut combo: String = String::from("");
+    while (words.len() as i8) < combo_min {
+        combo = utils::get_random_combo(combo_len);
+        words = configuration::get_instance().word_collection.find_permute(&combo.to_string(), min, exists, lax, includes, size);    
+    }
+    
+    let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    let time = finish - start;
+    let dtos: Vec<DTOWordLite> = words.iter().map(|word| word.as_dto_lite()).collect();
+    let collection = DTOAnonymousCollection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), query: combo, result: dtos};
     
     return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
 }
 
 #[get("/permute/<combo>?<min>&<exists>&<lax>&<includes>&<size>")]
-fn word_permute(combo: &str, min: Option<i8>, exists: Option<bool>, lax: Option<bool>, includes: Option<i8>, size: Option<i64>,) -> Result<String, Custom<String>>{
+fn word_permute(combo: &str, min: Option<i8>, exists: Option<bool>, lax: Option<bool>, includes: Option<i8>, size: Option<i64>) -> Result<String, Custom<String>>{
     let configuration = configuration::get_instance();
     if includes.is_some() && (size.is_none() || size.is_some() && size.unwrap() > configuration.max_permute) {
         return Result::Err(Custom(Status::NotAcceptable, "Cannot process the request, max size for permute filter is ".to_string() + &configuration.max_permute.to_string() + " elements."));
@@ -44,7 +82,7 @@ fn word_permute(combo: &str, min: Option<i8>, exists: Option<bool>, lax: Option<
     let finish = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let time = finish - start;
     let dtos: Vec<DTOWordLite> = words.iter().map(|word| word.as_dto_lite()).collect();
-    let collection = DTOAnonymousCollection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), result: dtos};
+    let collection = DTOAnonymousCollection{size: words.len(), timestamp: finish.as_millis(), time: time.as_millis(), query: combo.to_owned(), result: dtos};
     
     return Result::Ok(format!("{}", serde_json::to_string(&collection).unwrap()));
 }

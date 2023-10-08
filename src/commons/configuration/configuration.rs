@@ -1,3 +1,4 @@
+#[path = "../../commons/utils.rs"] pub(crate) mod utils;
 #[path = "../../commons/dependency.rs"] pub(crate) mod dependency;
 #[path = "../../commons/log/log_service.rs"] pub(crate) mod log_service;
 #[path = "../../commons/log/logger.rs"] pub(crate) mod logger;

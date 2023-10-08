@@ -7,5 +7,6 @@ pub struct DTOAnonymousCollection<T> {
     pub size: usize,
     pub timestamp: u128,
     pub time: u128,
+    pub query: String,
     pub result: Vec<T>
 }
